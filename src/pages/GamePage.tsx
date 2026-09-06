@@ -82,6 +82,7 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("Set the roster, then hand the phone around one player at a time.");
   const [importPayload, setImportPayload] = useState("");
+  const [importedPlayerId, setImportedPlayerId] = useState<string | null>(null);
   const [importMessage, setImportMessage] = useState("Scan or paste a slip to fill the current player's songs.");
   const [importError, setImportError] = useState("");
   const [importState, setImportState] = useState<"idle" | "scanning" | "blocked">("idle");
@@ -189,6 +190,7 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
     const nextIndex = currentPlayerIndex + 1;
     if (nextIndex < players.length) {
       setPendingNextPlayerIndex(nextIndex);
+      setImportedPlayerId(null);
       setScreen("handoff");
       setMessage(`Saved ${players[currentPlayerIndex].name}. Pass the phone to ${players[nextIndex].name}.`);
       setError("");
@@ -237,7 +239,8 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
     setPlayers((current) =>
       current.map((player, index) => (index === currentPlayerIndex ? { ...player, links: result.links } : player))
     );
-    setImportPayload(payload);
+    setImportPayload("");
+    setImportedPlayerId(players[currentPlayerIndex].id);
     setImportError("");
     setImportMessage(`Imported ${result.links.length} songs for ${players[currentPlayerIndex].name}.`);
     setMessage(`Imported ${result.links.length} songs for ${players[currentPlayerIndex].name}.`);
@@ -293,6 +296,7 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
             if (pendingNextPlayerIndex !== null) {
               setCurrentPlayerIndex(pendingNextPlayerIndex);
             }
+            setImportedPlayerId(null);
             setPendingNextPlayerIndex(null);
             setScreen("private");
             setError("");
@@ -375,18 +379,35 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
               </select>
             </label>
           </div>
-          <div className="mt-6 space-y-3">
-            {Array.from({ length: songCount }, (_, songIndex) => (
-              <input
-                key={songIndex}
-                aria-label={`${currentPlayer.name} song ${songIndex + 1}`}
-                value={currentPlayer.links[songIndex] ?? ""}
-                onChange={(event) => updateLink(currentPlayerIndex, songIndex, event.target.value)}
-                placeholder={`Song ${songIndex + 1} YouTube link`}
-                className="w-full rounded-xl border border-[#7b846f] bg-[#faf8f0] px-3 py-2 text-sm text-[#18211f] outline-none"
-              />
-            ))}
-          </div>
+          {importedPlayerId === currentPlayer.id ? (
+            <div className="mt-6 rounded-md border border-[#7b846f] bg-[#e2e9bb] p-4">
+              <p className="font-semibold text-[#18211f]">{songCount} songs received</p>
+              <p className="mt-1 text-sm text-[#536056]">The links are hidden on this phone until the game reveals each owner.</p>
+              <button
+                type="button"
+                onClick={() => {
+                  setImportedPlayerId(null);
+                  updatePlayer(currentPlayerIndex, { links: Array.from({ length: songCount }, () => "") });
+                }}
+                className="mt-3 rounded-md border border-[#7b846f] bg-[#faf8f0] px-3 py-2 text-sm text-[#18211f]"
+              >
+                Replace with manual links
+              </button>
+            </div>
+          ) : (
+            <div className="mt-6 space-y-3">
+              {Array.from({ length: songCount }, (_, songIndex) => (
+                <input
+                  key={songIndex}
+                  aria-label={`${currentPlayer.name} song ${songIndex + 1}`}
+                  value={currentPlayer.links[songIndex] ?? ""}
+                  onChange={(event) => updateLink(currentPlayerIndex, songIndex, event.target.value)}
+                  placeholder={`Song ${songIndex + 1} YouTube link`}
+                  className="w-full rounded-xl border border-[#7b846f] bg-[#faf8f0] px-3 py-2 text-sm text-[#18211f] outline-none"
+                />
+              ))}
+            </div>
+          )}
           {error ? <p className="mt-4 text-sm text-[#922c22]">{error}</p> : null}
           <div className="mt-6 flex flex-wrap gap-3">
             <button
@@ -594,7 +615,6 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
       const scanner = new QrScanner(
         importVideoRef.current,
         (result) => {
-          setImportPayload(result.data);
           if (applyImportedSlip(result.data)) {
             setImportState("idle");
             stopImportScanner();

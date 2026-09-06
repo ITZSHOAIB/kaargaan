@@ -21,7 +21,7 @@ test("tabletop screens and round controls fit phone and desktop", async ({ page 
       videoIds: ["abcdefghijk", "lmnopqrstuv", "12345678_-0"]
     }));
     await page.getByRole("button", { name: "Import slip" }).click();
-    await expect(page.getByRole("textbox", { name: /Asha song 1/ })).toHaveValue("https://www.youtube.com/watch?v=abcdefghijk");
+    await expect(page.getByText("3 songs received")).toBeVisible();
     await page.getByRole("button", { name: "Save and pass" }).click();
     await page.getByRole("button", { name: "Continue" }).click();
     await page.getByRole("button", { name: "Save and pass" }).click();
