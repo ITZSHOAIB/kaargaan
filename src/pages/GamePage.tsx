@@ -732,8 +732,10 @@ function Playing({ game, setGame }: { game: Game; setGame: (game: Game | null) =
         <p className="text-xs uppercase tracking-normal text-[#18211f]">Game complete</p>
         <h2 className="mt-2 text-3xl font-semibold text-[#18211f]">Final standings</h2>
         <p className="mt-3 text-sm leading-7 text-[#18211f]">
-          {topScore === 0
-            ? "No scored rounds."
+          {game.endedEarly
+            ? "The game ended early. These scores reflect the rounds revealed so far."
+            : topScore === 0
+              ? "No scored rounds."
             : winners.length === 1
               ? `${winners[0].name} wins with ${topScore} points.`
               : `Tied winners: ${winners.map((player) => player.name).join(", ")} with ${topScore} points.`}
@@ -926,9 +928,9 @@ function Playing({ game, setGame }: { game: Game; setGame: (game: Game | null) =
           <div className="mt-3">
           {confirmEnd ? (
             <div className="space-y-3">
-              <p className="text-sm text-[#922c22]">End this game and discard its current progress?</p>
+              <p className="text-sm text-[#922c22]">End this game and show the current standings?</p>
               <div className="flex gap-2">
-                <button type="button" onClick={() => { clearCurrentGame(); setGame(null); }} className="rounded-md bg-[#ef7657] action px-3 py-2 text-sm font-semibold text-[#18211f]">End game</button>
+                <button type="button" onClick={() => commit({ ...game, status: "completed", endedEarly: true }, "Game ended. Final standings are ready.")} className="rounded-md bg-[#ef7657] action px-3 py-2 text-sm font-semibold text-[#18211f]">End game</button>
                 <button type="button" onClick={() => setConfirmEnd(false)} className="rounded-md border border-[#7b846f] bg-[#faf8f0] px-3 py-2 text-sm text-[#18211f]">Keep playing</button>
               </div>
             </div>

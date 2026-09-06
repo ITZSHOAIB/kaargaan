@@ -68,5 +68,6 @@ export type Game = {
   rounds: Round[];
   activeRoundIndex: number;
   status: "setup" | "playing" | "completed";
+  endedEarly?: boolean;
   saveRevision: number;
 };

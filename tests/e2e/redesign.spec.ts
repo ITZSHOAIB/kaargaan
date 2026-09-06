@@ -44,6 +44,10 @@ test("tabletop screens and round controls fit phone and desktop", async ({ page 
     await expect(page.locator(".reveal")).toContainText("brought this song");
     await page.reload();
     await expect(page.locator(".reveal")).toContainText("brought this song");
+    await page.getByText("Game controls", { exact: true }).click();
+    await page.getByRole("button", { name: "End game", exact: true }).click();
+    await page.getByRole("button", { name: "End game", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Final standings" })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.evaluate(() => localStorage.clear());
   }
