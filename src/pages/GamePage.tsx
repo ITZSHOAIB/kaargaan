@@ -16,7 +16,7 @@ import { clearCurrentGame, currentGameKey, loadCurrentGameState, saveCurrentGame
 import QRCode from "qrcode";
 import { createRoomInvite, encodeRoomInvite, ENCRYPTED_SLIP_PREFIX, importEncryptedSongSlip, importSongSlip } from "../lib/songSlip";
 import { normalizeYouTubeLink } from "../lib/youtube";
-import { RoomBadge } from "../components/RoomBadge";
+import { RoomSubheader } from "../components/RoomBadge";
 import type { Game, Player, Submission } from "../lib/types";
 import { Select } from "../components/ui/Select";
 
@@ -336,9 +336,10 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
 
   if (screen === "invite") {
     return (
+      <>
+      <RoomSubheader roomId={roomId} />
       <section className="mx-auto max-w-3xl sheet">
         <p className="round-marker">Host · Step 2 of 4</p>
-        <RoomBadge roomId={roomId} />
         <h2 className="mt-2 text-3xl font-semibold text-[#18211f]">Everyone: scan this room QR</h2>
         <p className="mt-3 text-sm leading-7 text-[#18211f]">
           Keep this screen open while every player scans it on their own phone. It shares the theme and songs-per-player setting.
@@ -359,6 +360,7 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
         </div>
         <button type="button" onClick={() => { setCurrentPlayerIndex(0); setScreen("private"); setMessage(`Add your own songs, ${hostName}.`); }} className="mt-6 rounded-md bg-[#ef7657] action px-5 py-3 text-sm font-semibold text-[#18211f]">Everyone has scanned — add my songs</button>
       </section>
+      </>
     );
   }
 
@@ -438,10 +440,11 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
 
   if (screen === "private") {
     return (
+      <>
+      <RoomSubheader roomId={roomId} />
       <section className="host-collection-layout grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
         <div className="host-collection-intro order-1 lg:col-span-2">
           <p className="round-marker">Host · Step 2 of 3</p>
-          <RoomBadge roomId={roomId} />
           <h2 className="mt-2 text-3xl font-semibold text-[#18211f]">Collect songs from {currentPlayer.name}</h2>
           <p className="mt-3 text-sm leading-7 text-[#18211f]">
             Ask {currentPlayer.name} to prepare songs on their own phone. Scan their QR in the room, or paste their encrypted entry if they are joining through Discord.
@@ -571,6 +574,7 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
           </details>
         </aside>
       </section>
+      </>
     );
   }
 
@@ -771,12 +775,13 @@ function Playing({ game, setGame }: { game: Game; setGame: (game: Game | null) =
   const phaseLabel = round.phase === "listening" ? "Listen first" : round.phase === "voting" ? "Voting open" : round.phase === "revealed" ? "Owner revealed" : "Round skipped";
 
   return (
+    <>
+    {game.roomId ? <RoomSubheader roomId={game.roomId} /> : null}
     <section className="game-shell grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
       <div className="sheet stage-sheet">
         {persistenceError ? <p className="mb-4 rounded-md border border-rose-300/20 bg-rose-300/10 px-4 py-3 text-sm text-[#922c22]">{persistenceError}</p> : null}
         <div className="stage-topline">
           <p className="round-marker">Round {game.activeRoundIndex + 1} <span>of {game.rounds.length}</span></p>
-          {game.roomId ? <RoomBadge roomId={game.roomId} /> : null}
         </div>
         <p className="stage-kicker">The mystery track</p>
         <h2 className="stage-title">Whose song is playing?</h2>
@@ -934,6 +939,7 @@ function Playing({ game, setGame }: { game: Game; setGame: (game: Game | null) =
         </details>
       </aside>
     </section>
+    </>
   );
 }
 

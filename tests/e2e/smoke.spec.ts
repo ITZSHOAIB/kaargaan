@@ -20,7 +20,7 @@ test("home, player, and host pages render", async ({ page }) => {
   await page.getByRole("button", { name: "Use invite" }).click();
   await expect(page.getByRole("heading", { name: "Prepare songs for the host" })).toBeVisible();
   await expect(page.getByText("Monsoon night")).toBeVisible();
-  await expect(page.getByText("Room", { exact: true })).toBeVisible();
+  await expect(page.getByText("Room ID", { exact: true })).toBeVisible();
   await page.getByRole("textbox", { name: "Your name" }).fill("Remote player");
   await page.getByRole("textbox", { name: "Song 1" }).fill("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
   await page.getByRole("textbox", { name: "Song 2" }).fill("https://www.youtube.com/watch?v=9bZkp7q19f0");
