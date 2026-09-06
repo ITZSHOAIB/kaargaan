@@ -651,6 +651,7 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
 function Playing({ game, setGame }: { game: Game; setGame: (game: Game | null) => void }) {
   const [message, setMessage] = useState("Start playback, discuss, then open voting.");
   const [persistenceError, setPersistenceError] = useState("");
+  const [confirmEnd, setConfirmEnd] = useState(false);
   const round = currentRound(game);
   const submission = game.submissions.find((candidate) => candidate.id === round?.submissionId);
   const scores = standings(game);
@@ -868,6 +869,19 @@ function Playing({ game, setGame }: { game: Game; setGame: (game: Game | null) =
               </div>
             ))}
           </div>
+        </div>
+        <div className="mt-6 border-t border-[#7b846f] pt-5">
+          {confirmEnd ? (
+            <div className="space-y-3">
+              <p className="text-sm text-[#922c22]">End this game and discard its current progress?</p>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => { clearCurrentGame(); setGame(null); }} className="rounded-md bg-[#ef7657] action px-3 py-2 text-sm font-semibold text-[#18211f]">End game</button>
+                <button type="button" onClick={() => setConfirmEnd(false)} className="rounded-md border border-[#7b846f] bg-[#faf8f0] px-3 py-2 text-sm text-[#18211f]">Keep playing</button>
+              </div>
+            </div>
+          ) : (
+            <button type="button" onClick={() => setConfirmEnd(true)} className="rounded-md border border-[#7b846f] bg-[#faf8f0] px-3 py-2 text-sm text-[#536056]">End game</button>
+          )}
         </div>
       </aside>
     </section>
