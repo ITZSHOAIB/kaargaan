@@ -29,8 +29,11 @@ test("tabletop screens and round controls fit phone and desktop", async ({ page 
     await page.getByRole("button", { name: "Confirm player submission" }).click();
     await page.getByRole("button", { name: "Start game", exact: true }).click();
     await page.getByRole("button", { name: "Open voting", exact: true }).click();
-    const selects = page.locator("select");
-    for (let i = 0; i < await selects.count(); i++) await selects.nth(i).selectOption({ index: 1 });
+    const selects = page.getByRole("combobox");
+    for (let i = 0; i < await selects.count(); i++) {
+      await selects.nth(i).click();
+      await page.getByRole("option").first().click();
+    }
     await page.screenshot({ path: `/tmp/kaargaan-voting-${width}.png`, fullPage: true });
     await page.getByRole("button", { name: "Reveal song owner" }).click();
     await expect(page.getByRole("status")).toContainText("brought this song");

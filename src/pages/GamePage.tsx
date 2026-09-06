@@ -16,6 +16,7 @@ import QRCode from "qrcode";
 import { createRoomInvite, encodeRoomInvite, importSongSlip } from "../lib/songSlip";
 import { normalizeYouTubeLink } from "../lib/youtube";
 import type { Game, Player, Submission } from "../lib/types";
+import { Select } from "../components/ui/Select";
 
 const qrScannerWorkerPath = new URL("qr-scanner/qr-scanner-worker.min.js", import.meta.url).toString();
 QrScanner.WORKER_PATH = qrScannerWorkerPath;
@@ -396,17 +397,13 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
             <Field label="Theme" value={theme} onChange={setTheme} disabled />
             <label className="space-y-2">
               <span className="block text-xs uppercase tracking-normal text-[#536056]">Songs per player</span>
-              <select
-                value={songCount}
+              <Select
+                value={String(songCount)}
+                onValueChange={() => undefined}
                 disabled
-                className="w-full rounded-md border border-[#7b846f] bg-[#faf8f0] px-4 py-3 text-sm text-[#18211f]"
-              >
-                <option value={1}>1 song</option>
-                <option value={2}>2 songs</option>
-                <option value={3}>3 songs</option>
-                <option value={4}>4 songs</option>
-                <option value={5}>5 songs</option>
-              </select>
+                options={[1, 2, 3, 4, 5].map((count) => ({ value: String(count), label: `${count} ${count === 1 ? "song" : "songs"}` }))}
+                aria-label="Songs per player"
+              />
             </label>
           </div>
           {isHostSlot ? (
@@ -551,25 +548,23 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
         <Field label="Theme" value={theme} onChange={setTheme} />
         <label className="space-y-2">
           <span className="block text-xs uppercase tracking-normal text-[#536056]">Songs per player</span>
-          <select
-            value={songCount}
-            onChange={(event) => updateSongCount(Number(event.target.value))}
-            className="w-full rounded-md border border-[#7b846f] bg-[#faf8f0] px-4 py-3 text-sm text-[#18211f]"
-          >
-            <option value={1}>1 song</option>
-            <option value={2}>2 songs</option>
-            <option value={3}>3 songs</option>
-            <option value={4}>4 songs</option>
-            <option value={5}>5 songs</option>
-          </select>
+          <Select
+            value={String(songCount)}
+            onValueChange={(value) => updateSongCount(Number(value))}
+            options={[1, 2, 3, 4, 5].map((count) => ({ value: String(count), label: `${count} ${count === 1 ? "song" : "songs"}` }))}
+            aria-label="Songs per player"
+          />
         </label>
       </div>
 
       <label className="mt-6 block max-w-xs space-y-2">
         <span className="block text-xs uppercase tracking-normal text-[#536056]">Total players, including you</span>
-        <select value={playerCount} onChange={(event) => setPlayerCount(Number(event.target.value))} className="w-full rounded-md border border-[#7b846f] bg-[#faf8f0] px-4 py-3 text-sm text-[#18211f]">
-          {Array.from({ length: 8 }, (_, index) => <option key={index + 3} value={index + 3}>{index + 3} players</option>)}
-        </select>
+        <Select
+          value={String(playerCount)}
+          onValueChange={(value) => setPlayerCount(Number(value))}
+          options={Array.from({ length: 8 }, (_, index) => ({ value: String(index + 3), label: `${index + 3} players` }))}
+          aria-label="Total players, including you"
+        />
       </label>
 
       {error ? <p className="mt-4 text-sm text-[#922c22]">{error}</p> : null}
@@ -807,27 +802,22 @@ function Playing({ game, setGame }: { game: Game; setGame: (game: Game | null) =
           {orderedVoters.map((voter) => (
             <label key={voter.id} className="block">
               <span className="text-xs uppercase tracking-normal text-[#536056]">{voter.name}</span>
-              <select
-                value={round.votes[voter.id] ?? ""}
-                disabled={round.phase !== "voting"}
-                onChange={(event) => {
-                  try {
-                    commit(recordVote(game, voter.id, event.target.value), "Vote recorded.");
-                  } catch (caught) {
-                    setMessage(caught instanceof Error ? caught.message : "Vote rejected.");
-                  }
-                }}
-                className="mt-2 w-full rounded-xl border border-[#7b846f] bg-[#faf8f0] px-3 py-2 text-sm text-[#18211f]"
-              >
-                <option value="">Choose a player</option>
-                {game.players
-                  .filter((player) => player.id !== voter.id)
-                  .map((player) => (
-                    <option key={player.id} value={player.id}>
-                      {player.name}
-                    </option>
-                  ))}
-              </select>
+              <div className="mt-2">
+                <Select
+                  value={round.votes[voter.id] ?? ""}
+                  onValueChange={(value) => {
+                    try {
+                      commit(recordVote(game, voter.id, value), "Vote recorded.");
+                    } catch (caught) {
+                      setMessage(caught instanceof Error ? caught.message : "Vote rejected.");
+                    }
+                  }}
+                  disabled={round.phase !== "voting"}
+                  options={game.players.filter((player) => player.id !== voter.id).map((player) => ({ value: player.id, label: player.name }))}
+                  placeholder="Choose a player"
+                  aria-label={`Guess for ${voter.name}`}
+                />
+              </div>
             </label>
           ))}
         </div>

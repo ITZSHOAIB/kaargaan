@@ -12,9 +12,10 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@radix-ui/react-select": "^2.3.7",
     "lucide-react": "^1.8.0",
-    "qrcode": "^1.5.4",
     "qr-scanner": "^1.4.2",
+    "qrcode": "^1.5.4",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.3",
