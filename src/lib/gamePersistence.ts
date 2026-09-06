@@ -9,6 +9,14 @@ type GameEnvelope = {
   game: Game;
 };
 
+type StoredGameEnvelope = {
+  format: "kaargaan-current-game-encoded";
+  version: 1;
+  encoding: "base64";
+  savedAt: string;
+  payload: string;
+};
+
 type LoadCurrentGameState = {
   game: Game | null;
   error: string | null;
@@ -28,7 +36,14 @@ export function saveCurrentGame(game: Game): Game {
     game: nextGame
   };
 
-  localStorage.setItem(KEY, JSON.stringify(envelope));
+  const stored: StoredGameEnvelope = {
+    format: "kaargaan-current-game-encoded",
+    version: 1,
+    encoding: "base64",
+    savedAt: envelope.savedAt,
+    payload: encodeText(JSON.stringify(envelope))
+  };
+  localStorage.setItem(KEY, JSON.stringify(stored));
   return nextGame;
 }
 
@@ -39,12 +54,12 @@ export function loadCurrentGameState(): LoadCurrentGameState {
   }
 
   try {
-    const parsed = JSON.parse(raw) as Partial<GameEnvelope>;
-    if (parsed.format !== "kaargaan-current-game" || parsed.version !== 1 || !isGame(parsed.game)) {
+    const envelope = decodeStoredEnvelope(raw);
+    if (!envelope) {
       return { game: null, error: "A saved game could not be restored. Clear the current game and start over." };
     }
 
-    return { game: parsed.game, error: null };
+    return { game: envelope.game, error: null };
   } catch {
     return { game: null, error: "A saved game could not be restored. Clear the current game and start over." };
   }
@@ -69,13 +84,43 @@ function readEnvelope(): GameEnvelope | null {
   }
 
   try {
-    const parsed = JSON.parse(raw) as Partial<GameEnvelope>;
-    return parsed.format === "kaargaan-current-game" && parsed.version === 1 && isGame(parsed.game)
-      ? parsed as GameEnvelope
+    return decodeStoredEnvelope(raw);
+  } catch {
+    return null;
+  }
+}
+
+function decodeStoredEnvelope(raw: string): GameEnvelope | null {
+  try {
+    const parsed = JSON.parse(raw) as Partial<GameEnvelope> & Partial<StoredGameEnvelope>;
+    if (parsed.format === "kaargaan-current-game" && parsed.version === 1 && isGame(parsed.game)) {
+      return parsed as GameEnvelope;
+    }
+
+    if (parsed.format !== "kaargaan-current-game-encoded" || parsed.version !== 1 || parsed.encoding !== "base64" || typeof parsed.payload !== "string") {
+      return null;
+    }
+
+    const decoded = JSON.parse(decodeText(parsed.payload)) as Partial<GameEnvelope>;
+    return decoded.format === "kaargaan-current-game" && decoded.version === 1 && isGame(decoded.game)
+      ? decoded as GameEnvelope
       : null;
   } catch {
     return null;
   }
+}
+
+function encodeText(value: string): string {
+  const bytes = new TextEncoder().encode(value);
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+function decodeText(value: string): string {
+  const binary = atob(value);
+  const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
 }
 
 function isGame(value: Game | undefined): value is Game {

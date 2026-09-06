@@ -7,12 +7,12 @@ export function HomePage() {
       <h2>Your songs.<br/>Their guesses.<br/><em>Keep a straight face.</em></h2>
       <p>One person hosts the room. Everyone else adds songs privately, then the room guesses who picked each track.</p>
       <div className="role-choice" aria-label="Choose your role">
-        <Link className="role-option role-option-primary" to="/game">
+        <Link className="role-option role-option-primary" to="/host">
           <span className="role-icon"><Users size={21} aria-hidden="true" /></span>
           <span><strong>Host a game</strong><small>Set the players, play songs, and record votes.</small></span>
           <ArrowUpRight size={20} aria-hidden="true" />
         </Link>
-        <Link className="role-option" to="/prepare">
+        <Link className="role-option" to="/player">
           <span className="role-icon"><UserRound size={21} aria-hidden="true" /></span>
           <span><strong>Join as a player</strong><small>Prepare your songs on your own phone.</small></span>
           <ArrowUpRight size={20} aria-hidden="true" />

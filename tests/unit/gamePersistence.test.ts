@@ -24,6 +24,7 @@ describe("current game persistence", () => {
     ]);
     const saved = saveCurrentGame(game);
     expect(saved.saveRevision).toBe(1);
+    expect(localStorage.getItem("kaargaan.current-game.v1")).not.toContain("abcdefghijk");
     expect(loadCurrentGame()).toEqual(saved);
   });
 

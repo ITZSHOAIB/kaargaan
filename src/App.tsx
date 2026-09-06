@@ -9,13 +9,15 @@ export default function App() {
     <header className="masthead">
       <div className="brand"><Disc3 size={30} aria-hidden="true" /><h1>KaarGaan<span lang="bn">কার গান?</span></h1></div>
       <nav aria-label="Main navigation">
-        {[{to:"/",label:"Home",icon:House},{to:"/prepare",label:"Player prep",icon:Music2},{to:"/game",label:"Host game",icon:Play}].map(({to,label,icon:Icon}) =>
+        {[{to:"/",label:"Home",icon:House},{to:"/player",label:"Player prep",icon:Music2},{to:"/host",label:"Host game",icon:Play}].map(({to,label,icon:Icon}) =>
           <NavLink end key={to} to={to} className={({isActive})=>isActive?"nav-link active":"nav-link"}><Icon size={16} aria-hidden="true"/>{label}</NavLink>)}
       </nav>
     </header>
     <main id="main-content"><Routes>
-      <Route path="/" element={<HomePage/>}/><Route path="/prepare" element={<PreparePage/>}/>
-      <Route path="/game" element={<GamePage/>}/><Route path="*" element={<Navigate to="/" replace/>}/>
+      <Route path="/" element={<HomePage/>}/><Route path="/player" element={<PreparePage/>}/>
+      <Route path="/host" element={<GamePage/>}/>
+      <Route path="/prepare" element={<Navigate to="/player" replace/>}/><Route path="/game" element={<Navigate to="/host" replace/>}/>
+      <Route path="*" element={<Navigate to="/" replace/>}/>
     </Routes></main>
     <footer className="page-footer"><span>A room full of friends. A playlist full of suspects.</span><span>KaarGaan</span></footer>
   </div>;
