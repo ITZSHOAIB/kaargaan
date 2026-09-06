@@ -91,7 +91,7 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
   const [message, setMessage] = useState("Set the roster, then hand the phone around one player at a time.");
   const [importPayload, setImportPayload] = useState("");
   const [importedPlayerId, setImportedPlayerId] = useState<string | null>(null);
-  const [importMessage, setImportMessage] = useState("Scan or paste a slip to fill the current player's songs.");
+  const [importMessage, setImportMessage] = useState("Waiting for this player's entry.");
   const [importError, setImportError] = useState("");
   const [importState, setImportState] = useState<"idle" | "scanning" | "blocked">("idle");
   const importVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -434,26 +434,15 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
 
   if (screen === "private") {
     return (
-      <section className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="sheet">
+      <section className="host-collection-layout grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="host-collection-intro order-1 lg:col-span-2">
           <p className="round-marker">Host · Step 2 of 3</p>
           <h2 className="mt-2 text-3xl font-semibold text-[#18211f]">Collect songs from {currentPlayer.name}</h2>
           <p className="mt-3 text-sm leading-7 text-[#18211f]">
             Ask {currentPlayer.name} to prepare songs on their own phone. Scan their QR in the room, or paste their encrypted entry if they are joining through Discord.
           </p>
-          <div className="mt-6 grid gap-4 sm:grid-cols-[1fr_auto]">
-            <Field label="Theme" value={theme} onChange={setTheme} disabled />
-            <label className="space-y-2">
-              <span className="block text-xs uppercase tracking-normal text-[#536056]">Songs per player</span>
-              <Select
-                value={String(songCount)}
-                onValueChange={() => undefined}
-                disabled
-                options={[1, 2, 3, 4, 5].map((count) => ({ value: String(count), label: `${count} ${count === 1 ? "song" : "songs"}` }))}
-                aria-label="Songs per player"
-              />
-            </label>
-          </div>
+        </div>
+        <div className={`${isHostSlot || importedPlayerId === currentPlayer.id || error ? "sheet" : "host-collection-footer"} host-collection-form ${isHostSlot ? "order-2" : "order-3"} lg:order-2`}>
           {isHostSlot ? (
             <div className="mt-6 space-y-3">
               <p className="text-sm font-semibold text-[#18211f]">Your songs</p>
@@ -474,12 +463,7 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
               <p className="font-semibold text-[#18211f]">{songCount} songs received</p>
               <p className="mt-1 text-sm text-[#536056]">The links are hidden on this phone until the game reveals each owner.</p>
             </div>
-          ) : (
-            <div className="mt-6 rounded-md border border-[#7b846f] bg-[#c7d2ed] p-4">
-              <p className="font-semibold text-[#18211f]">Waiting for {currentPlayer.name}&apos;s submission QR</p>
-              <p className="mt-1 text-sm text-[#536056]">Keep this host phone here. Scan the player&apos;s QR in the panel beside this step.</p>
-            </div>
-          )}
+          ) : null}
           {error ? <p className="mt-4 text-sm text-[#922c22]">{error}</p> : null}
           <div className="mt-6 flex flex-wrap gap-3">
             {isHostSlot ? <button
@@ -507,18 +491,16 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
           <p className="mt-4 text-sm text-[#536056]">{message}</p>
         </div>
 
-        <aside className="sheet ledger">
-          <h3 className="text-base font-semibold text-[#18211f]">Handoff order</h3>
-          <p className="mt-2 text-sm text-[#536056]">Each player sees only their own songs. The rest stay hidden.</p>
-          {!isHostSlot ? <details className="mt-5 rounded-md border border-[#7b846f] bg-[#faf8f0] p-4" open>
-                <summary className="cursor-pointer text-sm font-semibold text-[#18211f]">Receive this player&apos;s entry</summary>
+        <aside className={`sheet ledger host-scan-column ${isHostSlot ? "order-3" : "order-2"} lg:order-3`}>
+          {!isHostSlot ? <details className="rounded-md border border-[#7b846f] bg-[#faf8f0] p-4" open>
+                <summary className="cursor-pointer text-base font-semibold text-[#18211f]">Scan {currentPlayer.name}&apos;s entry</summary>
                 <div className="pt-3">
                   <p className="text-sm text-[#536056]">
-                In the room, scan the QR from the player&apos;s phone. For Discord, paste the encrypted entry they shared below.
+                Scan their QR in the room, or paste the encrypted entry they shared through Discord.
               </p>
             <video
               ref={importVideoRef}
-              className="qr-camera mt-3 rounded-md border border-[#7b846f] bg-black"
+              className={`qr-camera mt-3 rounded-md border border-[#7b846f] bg-black ${importState === "scanning" ? "" : "qr-camera-idle"}`}
               muted
               playsInline
             />
@@ -526,25 +508,20 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
               <button
                 type="button"
                 onClick={() => void startImportScanner()}
-                className="rounded-md bg-[#c7d2ed] action px-4 py-2 text-sm font-medium text-[#18211f]"
+                className="w-full rounded-md bg-[#ef7657] action px-4 py-3 text-sm font-semibold text-[#18211f]"
               >
-                Start camera scan on host phone
-              </button>
-              <button
-                type="button"
-                onClick={() => stopImportScanner()}
-                className="rounded-md border border-[#7b846f] bg-[#faf8f0] px-4 py-2 text-sm text-[#18211f]"
-              >
-                Stop scan
+                Scan {currentPlayer.name} QR
               </button>
             </div>
-            <textarea
-              value={importPayload}
-              onChange={(event) => setImportPayload(event.target.value)}
-              placeholder="Paste the encrypted entry from Discord"
-              className="mt-3 min-h-28 w-full rounded-md border border-[#7b846f] bg-[#faf8f0] p-3 text-sm text-[#18211f] outline-none"
-            />
-            <div className="mt-3 flex flex-wrap gap-3">
+            {importState === "scanning" ? <button type="button" onClick={stopImportScanner} className="mt-3 w-full rounded-md border border-[#7b846f] bg-[#faf8f0] px-4 py-3 text-sm font-semibold text-[#18211f]">Stop scan</button> : null}
+            <details className="mt-4">
+              <summary className="cursor-pointer text-sm font-semibold text-[#18211f]">Paste encrypted entry instead</summary>
+              <textarea
+                value={importPayload}
+                onChange={(event) => setImportPayload(event.target.value)}
+                placeholder="Paste the encrypted entry from Discord"
+                className="mt-3 min-h-28 w-full rounded-md border border-[#7b846f] bg-[#faf8f0] p-3 text-sm text-[#18211f] outline-none"
+              />
               <button
                 type="button"
                 onClick={() => {
@@ -554,35 +531,39 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
                     applyImportedSlip(importPayload);
                   }
                 }}
-                className="rounded-md bg-[#ef7657] action px-4 py-2 text-sm font-semibold text-[#18211f]"
+                className="mt-3 rounded-md bg-[#ef7657] action px-4 py-2 text-sm font-semibold text-[#18211f]"
               >
                 Import entry
               </button>
-            </div>
+            </details>
               <p className="mt-3 text-xs uppercase tracking-normal text-[#536056]">Status: {importState}</p>
               <p className="mt-2 text-sm text-[#536056]">{importMessage}</p>
               {importError ? <p className="mt-2 text-sm text-[#922c22]">{importError}</p> : null}
             </div>
           </details> : null}
-          <div className="mt-5 space-y-2">
-            {players.map((player, index) => (
-              <div
-                key={player.id}
-                className={`rounded-md border px-4 py-3 text-sm ${
-                  index === currentPlayerIndex
-                    ? "border-[#18211f] bg-[#faf8f0] text-[#18211f]"
-                    : index < currentPlayerIndex
-                      ? "border-[#7b846f] bg-[#faf8f0] text-[#536056]"
-                      : "border-[#7b846f] bg-white text-[#536056]"
-                }`}
-              >
-                {index + 1}. {player.name}
-                <span className="ml-2 text-xs uppercase tracking-normal">
-                  {index < currentPlayerIndex ? "Locked" : index === currentPlayerIndex ? "Current" : "Waiting"}
-                </span>
-              </div>
-            ))}
-          </div>
+          <details className="mt-5 border-t border-[#a6ad99] pt-5">
+            <summary className="cursor-pointer text-base font-semibold text-[#18211f]">Handoff order · {currentPlayer.name}</summary>
+            <p className="mt-2 text-sm text-[#536056]">Each player sees only their own songs. The rest stay hidden.</p>
+            <div className="mt-4 space-y-2">
+              {players.map((player, index) => (
+                <div
+                  key={player.id}
+                  className={`rounded-md border px-4 py-3 text-sm ${
+                    index === currentPlayerIndex
+                      ? "border-[#18211f] bg-[#faf8f0] text-[#18211f]"
+                      : index < currentPlayerIndex
+                        ? "border-[#7b846f] bg-[#faf8f0] text-[#536056]"
+                        : "border-[#7b846f] bg-white text-[#536056]"
+                  }`}
+                >
+                  {index + 1}. {player.name}
+                  <span className="ml-2 text-xs uppercase tracking-normal">
+                    {index < currentPlayerIndex ? "Locked" : index === currentPlayerIndex ? "Current" : "Waiting"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </details>
         </aside>
       </section>
     );

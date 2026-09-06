@@ -16,14 +16,18 @@ test("tabletop screens and round controls fit phone and desktop", async ({ page 
     }
     await page.getByRole("button", { name: "Save my songs" }).click();
     await page.getByRole("button", { name: "Scan Player 2 submission" }).click();
+    await page.screenshot({ path: `/tmp/kaargaan-collect-player-${width}.png`, fullPage: true });
+    await page.getByText("Paste encrypted entry instead").click();
     await page.getByRole("textbox", { name: "Paste the encrypted entry from Discord" }).fill(JSON.stringify({ format: "kaargaan-song-slip", version: 1, playerName: "Asha", theme: "Monsoon night", videoIds: ["Zi_XLOBDo_Y", "L_jWHffIx5E", "hTWKbfoikeg"] }));
     await page.getByRole("button", { name: "Import entry" }).click();
     await page.getByRole("button", { name: "Confirm player submission" }).click();
     await page.getByRole("button", { name: "Scan Player 3 submission" }).click();
+    await page.getByText("Paste encrypted entry instead").click();
     await page.getByRole("textbox", { name: "Paste the encrypted entry from Discord" }).fill(JSON.stringify({ format: "kaargaan-song-slip", version: 1, playerName: "Biren", theme: "Monsoon night", videoIds: ["fJ9rUzIMcZQ", "3JZ_D3ELwOQ", "2Vv-BfVoq4g"] }));
     await page.getByRole("button", { name: "Import entry" }).click();
     await page.getByRole("button", { name: "Confirm player submission" }).click();
     await page.getByRole("button", { name: "Scan Player 4 submission" }).click();
+    await page.getByText("Paste encrypted entry instead").click();
     await page.getByRole("textbox", { name: "Paste the encrypted entry from Discord" }).fill(JSON.stringify({ format: "kaargaan-song-slip", version: 1, playerName: "Chitra", theme: "Monsoon night", videoIds: ["dQw4w9WgXcQ", "9bZkp7q19f0", "kJQP7kiw5Fk"] }));
     await page.getByRole("button", { name: "Import entry" }).click();
     await page.getByRole("button", { name: "Confirm player submission" }).click();
