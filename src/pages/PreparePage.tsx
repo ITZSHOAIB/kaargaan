@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import QrScanner from "qr-scanner";
-import { Download, Video } from "lucide-react";
+import { AlertCircle, Check, Download, ScanLine, Video } from "lucide-react";
 import { createSongSlip, decodeRoomInvite, encodeSongSlip } from "../lib/songSlip";
 import { normalizeYouTubeLink } from "../lib/youtube";
 import type { RoomInvite } from "../lib/types";
@@ -19,7 +19,7 @@ export function PreparePage() {
   const [inviteError, setInviteError] = useState("");
   const [inviteState, setInviteState] = useState<"idle" | "scanning">("idle");
   const [generatedSlip, setGeneratedSlip] = useState<string>("");
-  const [message, setMessage] = useState("Enter songs, then generate a local song slip.");
+  const [message, setMessage] = useState("Scan the room QR to get the song count.");
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const scannerRef = useRef<QrScanner | null>(null);
@@ -31,6 +31,28 @@ export function PreparePage() {
         return check.ok ? check : null;
       }),
     [links]
+  );
+  const duplicateOf = useMemo(() => {
+    const firstByVideoId = new Map<string, number>();
+    const duplicates = new Map<number, number>();
+    normalizedLinks.forEach((check, index) => {
+      if (!check) return;
+      const firstIndex = firstByVideoId.get(check.videoId);
+      if (firstIndex !== undefined) {
+        duplicates.set(index, firstIndex);
+        duplicates.set(firstIndex, index);
+      } else {
+        firstByVideoId.set(check.videoId, index);
+      }
+    });
+    return duplicates;
+  }, [normalizedLinks]);
+
+  const canGenerate = Boolean(
+    playerName.trim() &&
+    links.length === invite?.songsPerPlayer &&
+    normalizedLinks.every(Boolean) &&
+    duplicateOf.size === 0
   );
 
   useEffect(() => {
@@ -79,90 +101,96 @@ export function PreparePage() {
     setLinks(Array.from({ length: result.invite.songsPerPlayer }, () => ({ value: "" })));
     setInvitePayload("");
     setInviteError("");
-    setMessage(`Room ready: add ${result.invite.songsPerPlayer} songs, then show the QR to the host.`);
+    setMessage(`Room ready. Add ${result.invite.songsPerPlayer} different songs, then show your QR to the host.`);
     return true;
   }
 
   if (!invite) {
     return (
-      <section className="mx-auto max-w-2xl sheet">
+      <section className="mx-auto max-w-xl sheet player-join">
         <p className="round-marker">Player · Step 1 of 2</p>
-        <h2 className="mt-2 text-3xl font-semibold text-[#18211f]">Scan the host&apos;s room QR</h2>
-        <p className="mt-3 text-sm leading-7 text-[#18211f]">
-          Ask the host to show the room QR. Scan it here on your own phone. It will fill in the theme and song count for you.
-        </p>
-        <video ref={videoRef} className="mt-6 aspect-video w-full rounded-md border border-[#7b846f] bg-black" muted playsInline />
-        <div className="mt-4 flex flex-wrap gap-3">
-          <button type="button" onClick={() => void startInviteScanner()} className="rounded-md bg-[#ef7657] action px-4 py-3 text-sm font-semibold text-[#18211f]">
+        <div className="mt-2 flex items-start gap-4">
+          <div>
+            <h2 className="text-3xl font-semibold text-[#18211f]">Join the room</h2>
+            <p className="mt-3 text-sm leading-7 text-[#18211f]">
+              Scan the QR on the host&apos;s phone. It only shares the room theme and how many songs to add.
+            </p>
+          </div>
+          <div className="scan-icon" aria-hidden="true"><ScanLine size={26} /></div>
+        </div>
+        <div className="join-instruction mt-6">
+          <span className="join-step-number">1</span>
+          <div><strong>Ask the host to show the room QR</strong><span>Keep your phone on this screen.</span></div>
+        </div>
+        <div className={`qr-scan-panel mt-5${inviteState !== "scanning" ? " qr-scan-panel-hidden" : ""}`}>
+            <div className="qr-scan-frame">
+              <video ref={videoRef} className="qr-camera" muted playsInline />
+            </div>
+            <p className="mt-3 text-center text-sm text-[#536056]">Hold the QR inside the square. Move closer until it fills most of the frame.</p>
+            {inviteState === "scanning" ? <button type="button" onClick={stopInviteScanner} className="mt-4 w-full rounded-md border border-[#7b846f] bg-[#faf8f0] px-4 py-3 text-sm font-semibold text-[#18211f]">
+              Stop scanning
+            </button> : null}
+        </div>
+        {inviteState !== "scanning" ? (
+          <button type="button" onClick={() => void startInviteScanner()} className="mt-5 flex min-h-14 w-full items-center justify-center gap-3 rounded-md bg-[#ef7657] action px-4 py-3 text-sm font-semibold text-[#18211f]">
+            <ScanLine size={19} aria-hidden="true" />
             Scan host QR
           </button>
-          <button type="button" onClick={() => stopInviteScanner()} className="rounded-md border border-[#7b846f] bg-[#faf8f0] px-4 py-3 text-sm text-[#18211f]">
-            Stop camera
-          </button>
-        </div>
+        ) : null}
         <details className="mt-6">
           <summary className="cursor-pointer text-sm font-semibold text-[#18211f]">Can&apos;t use the camera? Paste the invite</summary>
           <textarea value={invitePayload} onChange={(event) => setInvitePayload(event.target.value)} placeholder="Paste the room invite payload" className="mt-3 min-h-28 w-full rounded-md border border-[#7b846f] bg-[#faf8f0] p-3 text-sm text-[#18211f]" />
           <button type="button" onClick={() => acceptInvite(invitePayload)} className="mt-3 rounded-md border border-[#7b846f] bg-[#faf8f0] px-4 py-2 text-sm text-[#18211f]">Use invite</button>
         </details>
-        {inviteState === "scanning" ? <p className="mt-3 text-sm text-[#536056]">Scanning…</p> : null}
         {inviteError ? <p className="mt-3 text-sm text-[#922c22]">{inviteError}</p> : null}
       </section>
     );
   }
 
   return (
-    <section className="grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
+    <section className="mx-auto max-w-2xl">
       <div className="sheet">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="round-marker">Player · Step 2 of 2</p>
             <h2 className="mt-2 text-3xl font-semibold tracking-tight text-[#18211f]">Prepare songs for the host</h2>
-            <p className="mt-3 max-w-2xl text-sm leading-7 text-[#18211f]">
-              Add your songs, then show the generated QR to the host.
-            </p>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-[#18211f]">Add exactly {invite.songsPerPlayer} different songs, then show one QR to the host.</p>
           </div>
-          <div className="rounded-md border border-cyan-300/20 bg-cyan-300/10 p-3 text-[#18211f]">
+          <div className="rounded-md border border-[#7b846f] bg-[#c7d2ed] p-3 text-[#18211f]">
             <Video className="h-5 w-5" />
           </div>
         </div>
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          <Field label="Your name" value={playerName} onChange={setPlayerName} />
-          <Field label="Room theme" value={theme} onChange={setTheme} disabled />
+        <div className="room-summary mt-6" aria-label="Room settings">
+          <div><span>Theme</span><strong>{theme}</strong></div>
+          <div><span>Your songs</span><strong>{invite.songsPerPlayer}</strong></div>
+          <div><span>Players</span><strong>{invite.playerCount}</strong></div>
         </div>
 
-        <div className="mt-6 space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold uppercase tracking-normal text-[#18211f]">Song links</h3>
-            <button
-              type="button"
-              onClick={() => setLinks((current) => current.length >= invite.songsPerPlayer ? current : [...current, { value: "" }])}
-              disabled={links.length >= invite.songsPerPlayer}
-              className="rounded-md border border-[#7b846f] bg-[#faf8f0] px-3 py-1.5 text-xs text-[#18211f] transition hover:brightness-95"
-            >
-              Add song
-            </button>
+        <div className="mt-7 space-y-3">
+          <Field label="Your name" value={playerName} onChange={setPlayerName} />
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-sm font-semibold uppercase tracking-normal text-[#18211f]">Your songs</h3>
+            <span className="text-xs text-[#536056]">{normalizedLinks.filter(Boolean).length}/{invite.songsPerPlayer} ready</span>
           </div>
           <div className="space-y-3">
             {links.map((link, index) => (
-              <div key={index} className="flex flex-col gap-2 rounded-md border border-[#7b846f] bg-[#faf8f0] p-3 sm:flex-row sm:items-center">
+              <div key={index} className={`song-entry${duplicateOf.has(index) ? " has-error" : normalizedLinks[index] ? " is-valid" : ""}`}>
+                <label className="song-entry-label" htmlFor={`song-${index}`}>
+                  <span>Song {index + 1}</span>
+                  {normalizedLinks[index] && !duplicateOf.has(index) ? <Check size={15} aria-hidden="true" /> : null}
+                </label>
                 <input
+                  id={`song-${index}`}
                   value={link.value}
                   onChange={(event) =>
                     setLinks((current) => current.map((item, itemIndex) => (itemIndex === index ? { value: event.target.value } : item)))
                   }
-                  placeholder="https://music.youtube.com/watch?v=..."
-                  className="min-w-0 flex-1 rounded-xl border border-[#7b846f] bg-[#faf8f0] px-3 py-2 text-sm text-[#18211f] outline-none placeholder:text-slate-500 focus:border-amber-300/50"
+                  placeholder="Paste a YouTube or YouTube Music link"
+                  className="control"
                 />
-                <div className="flex items-center gap-2 text-xs text-[#536056]">
-                  {normalizedLinks[index] ? (
-                    <span className="rounded-md border border-emerald-400/30 bg-emerald-400/10 px-2 py-1 text-[#18211f]">
-                      {normalizedLinks[index].videoId}
-                    </span>
-                  ) : (
-                    <span>Waiting for a valid link</span>
-                  )}
+                <div className="song-entry-status" role="status">
+                  {duplicateOf.has(index) ? <><AlertCircle size={14} aria-hidden="true" /> Same as Song {(duplicateOf.get(index) ?? 0) + 1}. Replace one of these links.</> : normalizedLinks[index] ? <><Check size={14} aria-hidden="true" /> Link looks good</> : link.value ? "Use a valid YouTube link" : "Add a link"}
                 </div>
               </div>
             ))}
@@ -191,13 +219,15 @@ export function PreparePage() {
               setQrDataUrl("");
               setMessage(`Created a ${result.slip.videoIds.length}-song slip for ${result.slip.playerName}.`);
             }}
-            className="inline-flex items-center gap-2 rounded-md bg-[#ef7657] action px-5 py-3 text-sm font-medium text-[#18211f] transition hover:brightness-95"
+            disabled={!canGenerate}
+            className="inline-flex items-center gap-2 rounded-md bg-[#ef7657] action px-5 py-3 text-sm font-medium text-[#18211f] transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-45"
           >
             <Download className="h-4 w-4" />
             Generate submission QR
           </button>
-          <span className="self-center text-sm text-[#18211f]">{message}</span>
+          <span className="self-center text-sm text-[#536056]">{message}</span>
         </div>
+        {!canGenerate ? <p className="mt-3 text-xs text-[#536056]">Add your name and {invite.songsPerPlayer} different YouTube links to continue.</p> : null}
 
         {generatedSlip ? (
           <div className="mt-6 grid gap-4 lg:grid-cols-[auto_1fr]">

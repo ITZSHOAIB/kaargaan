@@ -29,6 +29,22 @@ describe("song slip", () => {
     expect(decoded.ok).toBe(false);
   });
 
+  it("rejects duplicate links before generating a slip", () => {
+    expect(
+      createSongSlip({
+        playerName: "Asha",
+        theme: "Monsoon",
+        links: [
+          "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+          "https://youtu.be/dQw4w9WgXcQ"
+        ]
+      })
+    ).toEqual({
+      ok: false,
+      error: "Song 2 duplicates song 1. Replace one of these links."
+    });
+  });
+
   it("round-trips the compact encoded submission and room invite payloads", () => {
     const slip = createSongSlip({
       playerName: "Asha",

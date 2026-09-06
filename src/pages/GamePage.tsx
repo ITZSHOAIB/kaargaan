@@ -242,6 +242,23 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
       return false;
     }
 
+    const priorIds = new Set(
+      players
+        .slice(0, currentPlayerIndex)
+        .flatMap((player) => player.links)
+        .map((link) => normalizeYouTubeLink(link))
+        .filter((check): check is { ok: true; videoId: string; canonicalUrl: string; sourceUrl: string } => check.ok)
+        .map((check) => check.videoId)
+    );
+    const repeated = result.links.find((link) => {
+      const check = normalizeYouTubeLink(link);
+      return check.ok && priorIds.has(check.videoId);
+    });
+    if (repeated) {
+      setImportError("That submission repeats a song already used in this room. Ask the player to replace it, then show a new QR.");
+      return false;
+    }
+
     setPlayers((current) =>
       current.map((player, index) => (index === currentPlayerIndex ? { ...player, name: index === 0 ? player.name : result.playerName, links: result.links } : player))
     );
@@ -470,7 +487,7 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
               </p>
             <video
               ref={importVideoRef}
-              className="mt-3 aspect-video w-full rounded-md border border-[#7b846f] bg-black"
+              className="qr-camera mt-3 rounded-md border border-[#7b846f] bg-black"
               muted
               playsInline
             />

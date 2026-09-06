@@ -27,13 +27,22 @@ export function createSongSlip(input: {
   }
 
   const videoIds: string[] = [];
-  for (const link of input.links) {
+  for (const [index, link] of input.links.entries()) {
     const normalized = normalizeYouTubeLink(link);
     if (!normalized.ok) {
       return normalized;
     }
     if (!videoIds.includes(normalized.videoId)) {
       videoIds.push(normalized.videoId);
+    } else {
+      const firstIndex = input.links.findIndex((candidate) => {
+        const previous = normalizeYouTubeLink(candidate);
+        return previous.ok && previous.videoId === normalized.videoId;
+      });
+      return {
+        ok: false,
+        error: `Song ${index + 1} duplicates song ${firstIndex + 1}. Replace one of these links.`
+      };
     }
   }
 
