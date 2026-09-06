@@ -14,22 +14,19 @@ test("tabletop screens and round controls fit phone and desktop", async ({ page 
     for (const [index, id] of ["abcdefghijk", "lmnopqrstuv", "12345678_-0"].entries()) {
       await page.getByRole("textbox", { name: new RegExp(`Host song ${index + 1}`) }).fill(`https://www.youtube.com/watch?v=${id}`);
     }
-    await page.getByRole("button", { name: "Save and pass" }).click();
+    await page.getByRole("button", { name: "Save my songs" }).click();
     await page.getByRole("button", { name: "Scan Player 2 submission" }).click();
-    for (const [index, id] of ["Zi_XLOBDo_Y", "L_jWHffIx5E", "hTWKbfoikeg"].entries()) {
-      await page.getByRole("textbox", { name: new RegExp(`Player 2 song ${index + 1}`) }).fill(`https://www.youtube.com/watch?v=${id}`);
-    }
-    await page.getByRole("button", { name: "Save and pass" }).click();
+    await page.getByRole("textbox", { name: "Paste a KaarGaan song slip JSON payload" }).fill(JSON.stringify({ format: "kaargaan-song-slip", version: 1, playerName: "Asha", theme: "Monsoon night", videoIds: ["Zi_XLOBDo_Y", "L_jWHffIx5E", "hTWKbfoikeg"] }));
+    await page.getByRole("button", { name: "Import slip" }).click();
+    await page.getByRole("button", { name: "Confirm player submission" }).click();
     await page.getByRole("button", { name: "Scan Player 3 submission" }).click();
-    for (const [index, id] of ["fJ9rUzIMcZQ", "3JZ_D3ELwOQ", "2Vv-BfVoq4g"].entries()) {
-      await page.getByRole("textbox", { name: new RegExp(`Player 3 song ${index + 1}`) }).fill(`https://www.youtube.com/watch?v=${id}`);
-    }
-    await page.getByRole("button", { name: "Save and pass" }).click();
+    await page.getByRole("textbox", { name: "Paste a KaarGaan song slip JSON payload" }).fill(JSON.stringify({ format: "kaargaan-song-slip", version: 1, playerName: "Biren", theme: "Monsoon night", videoIds: ["fJ9rUzIMcZQ", "3JZ_D3ELwOQ", "2Vv-BfVoq4g"] }));
+    await page.getByRole("button", { name: "Import slip" }).click();
+    await page.getByRole("button", { name: "Confirm player submission" }).click();
     await page.getByRole("button", { name: "Scan Player 4 submission" }).click();
-    for (const [index, id] of ["dQw4w9WgXcQ", "9bZkp7q19f0", "kJQP7kiw5Fk"].entries()) {
-      await page.getByRole("textbox", { name: new RegExp(`Player 4 song ${index + 1}`) }).fill(`https://www.youtube.com/watch?v=${id}`);
-    }
-    await page.getByRole("button", { name: "Save and pass" }).click();
+    await page.getByRole("textbox", { name: "Paste a KaarGaan song slip JSON payload" }).fill(JSON.stringify({ format: "kaargaan-song-slip", version: 1, playerName: "Chitra", theme: "Monsoon night", videoIds: ["dQw4w9WgXcQ", "9bZkp7q19f0", "kJQP7kiw5Fk"] }));
+    await page.getByRole("button", { name: "Import slip" }).click();
+    await page.getByRole("button", { name: "Confirm player submission" }).click();
     await page.getByRole("button", { name: "Start game", exact: true }).click();
     await page.getByRole("button", { name: "Open voting", exact: true }).click();
     const selects = page.locator("select");

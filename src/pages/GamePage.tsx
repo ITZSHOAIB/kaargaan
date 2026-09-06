@@ -110,12 +110,6 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
     );
   }
 
-  function updatePlayer(index: number, update: Partial<SetupPlayer>) {
-    setPlayers((current) =>
-      current.map((player, i) => (i === index ? { ...player, ...update } : player))
-    );
-  }
-
   function updateLink(playerIndex: number, linkIndex: number, value: string) {
     setPlayers((current) =>
       current.map((player, i) =>
@@ -242,7 +236,7 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
       return false;
     }
 
-    if (result.roomId !== roomId || result.roomToken !== roomToken) {
+    if ((result.roomId || result.roomToken) && (result.roomId !== roomId || result.roomToken !== roomToken)) {
       setImportError("This submission belongs to a different room. Ask the player to scan this room's QR first.");
       return false;
     }
@@ -282,6 +276,7 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
 
   const currentPlayer = players[currentPlayerIndex];
   const nextPlayer = pendingNextPlayerIndex !== null ? players[pendingNextPlayerIndex] : null;
+  const isHostSlot = currentPlayerIndex === 0;
 
   useEffect(() => {
     return () => {
@@ -414,25 +409,10 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
               </select>
             </label>
           </div>
-          {importedPlayerId === currentPlayer.id ? (
-            <div className="mt-6 rounded-md border border-[#7b846f] bg-[#e2e9bb] p-4">
-              <p className="font-semibold text-[#18211f]">{songCount} songs received</p>
-              <p className="mt-1 text-sm text-[#536056]">The links are hidden on this phone until the game reveals each owner.</p>
-              <button
-                type="button"
-                onClick={() => {
-                  setImportedPlayerId(null);
-                  updatePlayer(currentPlayerIndex, { links: Array.from({ length: songCount }, () => "") });
-                }}
-                className="mt-3 rounded-md border border-[#7b846f] bg-[#faf8f0] px-3 py-2 text-sm text-[#18211f]"
-              >
-                Replace with manual links
-              </button>
-            </div>
-          ) : (
+          {isHostSlot ? (
             <div className="mt-6 space-y-3">
-              <p className="text-sm font-semibold text-[#18211f]">Or enter links on the host phone</p>
-              <p className="text-sm text-[#536056]">Use this only when {currentPlayer.name} is entering songs directly here.</p>
+              <p className="text-sm font-semibold text-[#18211f]">Your songs</p>
+              <p className="text-sm text-[#536056]">You are the host and a player. Enter your songs directly on this phone.</p>
               {Array.from({ length: songCount }, (_, songIndex) => (
                 <input
                   key={songIndex}
@@ -440,20 +420,37 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
                   value={currentPlayer.links[songIndex] ?? ""}
                   onChange={(event) => updateLink(currentPlayerIndex, songIndex, event.target.value)}
                   placeholder={`Song ${songIndex + 1} YouTube link`}
-                  className="w-full rounded-xl border border-[#7b846f] bg-[#faf8f0] px-3 py-2 text-sm text-[#18211f] outline-none"
+                  className="w-full rounded-md border border-[#7b846f] bg-[#faf8f0] px-3 py-3 text-sm text-[#18211f] outline-none"
                 />
               ))}
+            </div>
+          ) : importedPlayerId === currentPlayer.id ? (
+            <div className="mt-6 rounded-md border border-[#7b846f] bg-[#e2e9bb] p-4">
+              <p className="font-semibold text-[#18211f]">{songCount} songs received</p>
+              <p className="mt-1 text-sm text-[#536056]">The links are hidden on this phone until the game reveals each owner.</p>
+            </div>
+          ) : (
+            <div className="mt-6 rounded-md border border-[#7b846f] bg-[#c7d2ed] p-4">
+              <p className="font-semibold text-[#18211f]">Waiting for {currentPlayer.name}&apos;s submission QR</p>
+              <p className="mt-1 text-sm text-[#536056]">Keep this host phone here. Scan the player&apos;s QR in the panel beside this step.</p>
             </div>
           )}
           {error ? <p className="mt-4 text-sm text-[#922c22]">{error}</p> : null}
           <div className="mt-6 flex flex-wrap gap-3">
-            <button
+            {isHostSlot ? <button
               type="button"
               onClick={lockCurrentPlayer}
               className="rounded-md bg-[#ef7657] action px-5 py-3 text-sm font-semibold text-[#18211f]"
             >
-              Save and pass
-            </button>
+              Save my songs
+            </button> : null}
+            {!isHostSlot && importedPlayerId === currentPlayer.id ? <button
+              type="button"
+              onClick={lockCurrentPlayer}
+              className="rounded-md bg-[#ef7657] action px-5 py-3 text-sm font-semibold text-[#18211f]"
+            >
+              Confirm player submission
+            </button> : null}
             <button
               type="button"
               onClick={() => setScreen("roster")}
@@ -468,7 +465,7 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
         <aside className="sheet ledger">
           <h3 className="text-base font-semibold text-[#18211f]">Handoff order</h3>
           <p className="mt-2 text-sm text-[#536056]">Each player sees only their own songs. The rest stay hidden.</p>
-          <details className="mt-5 rounded-md border border-[#7b846f] bg-[#faf8f0] p-4">
+          {!isHostSlot ? <details className="mt-5 rounded-md border border-[#7b846f] bg-[#faf8f0] p-4" open>
             <summary className="cursor-pointer text-sm font-semibold text-[#18211f]">Host: scan the player&apos;s QR</summary>
             <div className="pt-3">
               <p className="text-sm text-[#536056]">
@@ -517,7 +514,7 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
               <p className="mt-2 text-sm text-[#536056]">{importMessage}</p>
               {importError ? <p className="mt-2 text-sm text-[#922c22]">{importError}</p> : null}
             </div>
-          </details>
+          </details> : null}
           <div className="mt-5 space-y-2">
             {players.map((player, index) => (
               <div
