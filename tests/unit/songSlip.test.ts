@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createSongSlip, decodeSongSlip, importSongSlip } from "../../src/lib/songSlip";
+import { createRoomInvite, createSongSlip, decodeRoomInvite, decodeSongSlip, encodeRoomInvite, encodeSongSlip, importSongSlip } from "../../src/lib/songSlip";
 
 describe("song slip", () => {
   it("creates a compact slip from valid links", () => {
@@ -29,6 +29,22 @@ describe("song slip", () => {
     expect(decoded.ok).toBe(false);
   });
 
+  it("round-trips the compact encoded submission and room invite payloads", () => {
+    const slip = createSongSlip({
+      playerName: "Asha",
+      theme: "Monsoon",
+      links: ["https://www.youtube.com/watch?v=dQw4w9WgXcQ"],
+      roomId: "room-1",
+      roomToken: "token-1",
+      songsPerPlayer: 1
+    });
+    expect(slip.ok).toBe(true);
+    if (slip.ok) expect(decodeSongSlip(encodeSongSlip(slip.slip))).toEqual(slip);
+
+    const invite = createRoomInvite({ roomId: "room-1", roomToken: "token-1", theme: "Monsoon", songsPerPlayer: 1, playerCount: 4 });
+    expect(decodeRoomInvite(encodeRoomInvite(invite))).toEqual({ ok: true, invite });
+  });
+
   it("imports slips only when the song count matches", () => {
     const imported = importSongSlip(
       JSON.stringify({
@@ -43,7 +59,8 @@ describe("song slip", () => {
 
     expect(imported).toEqual({
       ok: true,
-      links: ["https://www.youtube.com/watch?v=dQw4w9WgXcQ"]
+      links: ["https://www.youtube.com/watch?v=dQw4w9WgXcQ"],
+      playerName: "Asha"
     });
 
     expect(

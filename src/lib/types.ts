@@ -16,6 +16,19 @@ export type SongSlip = {
   playerName: string;
   theme: string;
   videoIds: string[];
+  roomId?: string;
+  roomToken?: string;
+  songsPerPlayer?: number;
+};
+
+export type RoomInvite = {
+  format: "kaargaan-room-invite";
+  version: 1;
+  roomId: string;
+  roomToken: string;
+  theme: string;
+  songsPerPlayer: number;
+  playerCount: number;
 };
 
 export type GameSnapshot = {

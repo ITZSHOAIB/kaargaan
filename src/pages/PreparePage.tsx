@@ -1,18 +1,28 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
+import QrScanner from "qr-scanner";
 import { Download, Video } from "lucide-react";
-import { createSongSlip, encodeSongSlip } from "../lib/songSlip";
+import { createSongSlip, decodeRoomInvite, encodeSongSlip } from "../lib/songSlip";
 import { normalizeYouTubeLink } from "../lib/youtube";
+import type { RoomInvite } from "../lib/types";
 
 type LinkRow = { value: string };
+const qrScannerWorkerPath = new URL("qr-scanner/qr-scanner-worker.min.js", import.meta.url).toString();
+QrScanner.WORKER_PATH = qrScannerWorkerPath;
 
 export function PreparePage() {
-  const [playerName, setPlayerName] = useState("Asha");
-  const [theme, setTheme] = useState("Monsoon night");
-  const [links, setLinks] = useState<LinkRow[]>([{ value: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" }]);
+  const [playerName, setPlayerName] = useState("");
+  const [theme, setTheme] = useState("");
+  const [links, setLinks] = useState<LinkRow[]>([]);
+  const [invite, setInvite] = useState<RoomInvite | null>(null);
+  const [invitePayload, setInvitePayload] = useState("");
+  const [inviteError, setInviteError] = useState("");
+  const [inviteState, setInviteState] = useState<"idle" | "scanning">("idle");
   const [generatedSlip, setGeneratedSlip] = useState<string>("");
   const [message, setMessage] = useState("Enter songs, then generate a local song slip.");
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const scannerRef = useRef<QrScanner | null>(null);
 
   const normalizedLinks = useMemo(
     () =>
@@ -53,16 +63,63 @@ export function PreparePage() {
     };
   }, [generatedSlip]);
 
+  useEffect(() => () => {
+    scannerRef.current?.destroy();
+    scannerRef.current = null;
+  }, []);
+
+  function acceptInvite(payload: string) {
+    const result = decodeRoomInvite(payload);
+    if (!result.ok) {
+      setInviteError(result.error);
+      return false;
+    }
+    setInvite(result.invite);
+    setTheme(result.invite.theme);
+    setLinks(Array.from({ length: result.invite.songsPerPlayer }, () => ({ value: "" })));
+    setInvitePayload("");
+    setInviteError("");
+    setMessage(`Room ready: add ${result.invite.songsPerPlayer} songs, then show the QR to the host.`);
+    return true;
+  }
+
+  if (!invite) {
+    return (
+      <section className="mx-auto max-w-2xl sheet">
+        <p className="round-marker">Player · Step 1 of 2</p>
+        <h2 className="mt-2 text-3xl font-semibold text-[#18211f]">Scan the host&apos;s room QR</h2>
+        <p className="mt-3 text-sm leading-7 text-[#18211f]">
+          Ask the host to show the room QR. Scan it here on your own phone. It will fill in the theme and song count for you.
+        </p>
+        <video ref={videoRef} className="mt-6 aspect-video w-full rounded-md border border-[#7b846f] bg-black" muted playsInline />
+        <div className="mt-4 flex flex-wrap gap-3">
+          <button type="button" onClick={() => void startInviteScanner()} className="rounded-md bg-[#ef7657] action px-4 py-3 text-sm font-semibold text-[#18211f]">
+            Scan host QR
+          </button>
+          <button type="button" onClick={() => stopInviteScanner()} className="rounded-md border border-[#7b846f] bg-[#faf8f0] px-4 py-3 text-sm text-[#18211f]">
+            Stop camera
+          </button>
+        </div>
+        <details className="mt-6">
+          <summary className="cursor-pointer text-sm font-semibold text-[#18211f]">Can&apos;t use the camera? Paste the invite</summary>
+          <textarea value={invitePayload} onChange={(event) => setInvitePayload(event.target.value)} placeholder="Paste the room invite payload" className="mt-3 min-h-28 w-full rounded-md border border-[#7b846f] bg-[#faf8f0] p-3 text-sm text-[#18211f]" />
+          <button type="button" onClick={() => acceptInvite(invitePayload)} className="mt-3 rounded-md border border-[#7b846f] bg-[#faf8f0] px-4 py-2 text-sm text-[#18211f]">Use invite</button>
+        </details>
+        {inviteState === "scanning" ? <p className="mt-3 text-sm text-[#536056]">Scanning…</p> : null}
+        {inviteError ? <p className="mt-3 text-sm text-[#922c22]">{inviteError}</p> : null}
+      </section>
+    );
+  }
+
   return (
     <section className="grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
       <div className="sheet">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="round-marker">Player · Step 1 of 1</p>
+            <p className="round-marker">Player · Step 2 of 2</p>
             <h2 className="mt-2 text-3xl font-semibold tracking-tight text-[#18211f]">Prepare songs for the host</h2>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-[#18211f]">
-              Keep this on the personal phone, then hand the game phone to the player for import.
-              The payload stays local and compact.
+              Add your songs, then show the generated QR to the host.
             </p>
           </div>
           <div className="rounded-md border border-cyan-300/20 bg-cyan-300/10 p-3 text-[#18211f]">
@@ -71,8 +128,8 @@ export function PreparePage() {
         </div>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          <Field label="Player name" value={playerName} onChange={setPlayerName} />
-          <Field label="Theme" value={theme} onChange={setTheme} />
+          <Field label="Your name" value={playerName} onChange={setPlayerName} />
+          <Field label="Room theme" value={theme} onChange={setTheme} disabled />
         </div>
 
         <div className="mt-6 space-y-3">
@@ -80,7 +137,8 @@ export function PreparePage() {
             <h3 className="text-sm font-semibold uppercase tracking-normal text-[#18211f]">Song links</h3>
             <button
               type="button"
-              onClick={() => setLinks((current) => [...current, { value: "" }])}
+              onClick={() => setLinks((current) => current.length >= invite.songsPerPlayer ? current : [...current, { value: "" }])}
+              disabled={links.length >= invite.songsPerPlayer}
               className="rounded-md border border-[#7b846f] bg-[#faf8f0] px-3 py-1.5 text-xs text-[#18211f] transition hover:brightness-95"
             >
               Add song
@@ -118,7 +176,10 @@ export function PreparePage() {
               const result = createSongSlip({
                 playerName,
                 theme,
-                links: links.map((item) => item.value)
+                links: links.map((item) => item.value),
+                roomId: invite.roomId,
+                roomToken: invite.roomToken,
+                songsPerPlayer: invite.songsPerPlayer
               });
               if (!result.ok) {
                 setMessage(result.error);
@@ -133,7 +194,7 @@ export function PreparePage() {
             className="inline-flex items-center gap-2 rounded-md bg-[#ef7657] action px-5 py-3 text-sm font-medium text-[#18211f] transition hover:brightness-95"
           >
             <Download className="h-4 w-4" />
-            Generate QR payload
+            Generate submission QR
           </button>
           <span className="self-center text-sm text-[#18211f]">{message}</span>
         </div>
@@ -170,16 +231,45 @@ export function PreparePage() {
       </div>
     </section>
   );
+
+  async function startInviteScanner() {
+    if (!videoRef.current) {
+      setInviteError("Camera preview is not ready yet.");
+      return;
+    }
+    setInviteError("");
+    setInviteState("scanning");
+    scannerRef.current?.destroy();
+    try {
+      const scanner = new QrScanner(videoRef.current, (result) => {
+        if (acceptInvite(result.data)) stopInviteScanner();
+      }, { highlightScanRegion: true, preferredCamera: "environment" });
+      scannerRef.current = scanner;
+      await scanner.start();
+    } catch (caught) {
+      setInviteState("idle");
+      setInviteError(caught instanceof Error ? caught.message : "Camera access is unavailable.");
+    }
+  }
+
+  function stopInviteScanner() {
+    scannerRef.current?.stop();
+    scannerRef.current?.destroy();
+    scannerRef.current = null;
+    setInviteState("idle");
+  }
 }
 
 function Field({
   label,
   value,
-  onChange
+  onChange,
+  disabled
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  disabled?: boolean;
 }) {
   return (
     <label className="space-y-2">
@@ -187,6 +277,7 @@ function Field({
       <input
         value={value}
         onChange={(event) => onChange(event.target.value)}
+        disabled={disabled}
         className="w-full rounded-md border border-[#7b846f] bg-[#faf8f0] px-4 py-3 text-sm text-[#18211f] outline-none placeholder:text-slate-500 focus:border-amber-300/50"
       />
     </label>

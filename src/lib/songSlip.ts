@@ -1,4 +1,4 @@
-import type { SongSlip } from "./types";
+import type { RoomInvite, SongSlip } from "./types";
 import { normalizeYouTubeLink } from "./youtube";
 
 const SLIP_MAX_BYTES = 2048;
@@ -7,6 +7,9 @@ export function createSongSlip(input: {
   playerName: string;
   theme: string;
   links: string[];
+  roomId?: string;
+  roomToken?: string;
+  songsPerPlayer?: number;
 }): { ok: true; slip: SongSlip } | { ok: false; error: string } {
   const playerName = input.playerName.trim();
   const theme = input.theme.trim();
@@ -39,7 +42,10 @@ export function createSongSlip(input: {
     version: 1,
     playerName,
     theme,
-    videoIds
+    videoIds,
+    ...(input.roomId ? { roomId: input.roomId } : {}),
+    ...(input.roomToken ? { roomToken: input.roomToken } : {}),
+    ...(input.songsPerPlayer ? { songsPerPlayer: input.songsPerPlayer } : {})
   };
 
   const encoded = JSON.stringify(slip);
@@ -51,12 +57,12 @@ export function createSongSlip(input: {
 }
 
 export function encodeSongSlip(slip: SongSlip): string {
-  return JSON.stringify(slip);
+  return encodeText(JSON.stringify(slip));
 }
 
 export function decodeSongSlip(payload: string): { ok: true; slip: SongSlip } | { ok: false; error: string } {
   try {
-    const parsed = JSON.parse(payload) as Partial<SongSlip>;
+    const parsed = JSON.parse(decodePayload(payload)) as Partial<SongSlip>;
     if (
       parsed?.format !== "kaargaan-song-slip" ||
       parsed.version !== 1 ||
@@ -81,10 +87,59 @@ export function decodeSongSlip(payload: string): { ok: true; slip: SongSlip } | 
   }
 }
 
+export function createRoomInvite(input: Omit<RoomInvite, "format" | "version">): RoomInvite {
+  return { format: "kaargaan-room-invite", version: 1, ...input };
+}
+
+export function encodeRoomInvite(invite: RoomInvite): string {
+  return encodeText(JSON.stringify(invite));
+}
+
+export function decodeRoomInvite(payload: string): { ok: true; invite: RoomInvite } | { ok: false; error: string } {
+  try {
+    const parsed = JSON.parse(decodePayload(payload)) as Partial<RoomInvite>;
+    if (
+      parsed.format !== "kaargaan-room-invite" ||
+      parsed.version !== 1 ||
+      typeof parsed.roomId !== "string" ||
+      typeof parsed.roomToken !== "string" ||
+      typeof parsed.theme !== "string" ||
+      !Number.isInteger(parsed.songsPerPlayer) ||
+      !Number.isInteger(parsed.playerCount)
+    ) {
+      return { ok: false, error: "This QR is not a KaarGaan room invite." };
+    }
+    return { ok: true, invite: parsed as RoomInvite };
+  } catch {
+    return { ok: false, error: "Could not read that room QR." };
+  }
+}
+
+function encodeText(value: string): string {
+  const bytes = new TextEncoder().encode(value);
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+function decodeText(value: string): string {
+  const binary = atob(value);
+  const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+
+function decodePayload(value: string): string {
+  try {
+    return decodeText(value);
+  } catch {
+    return value;
+  }
+}
+
 export function importSongSlip(
   payload: string,
   expectedSongCount: number
-): { ok: true; links: string[] } | { ok: false; error: string } {
+): { ok: true; links: string[]; playerName: string; roomId?: string; roomToken?: string } | { ok: false; error: string } {
   const decoded = decodeSongSlip(payload);
   if (!decoded.ok) {
     return decoded;
@@ -101,6 +156,9 @@ export function importSongSlip(
 
   return {
     ok: true,
-    links: decoded.slip.videoIds.map((videoId) => `https://www.youtube.com/watch?v=${videoId}`)
+    links: decoded.slip.videoIds.map((videoId) => `https://www.youtube.com/watch?v=${videoId}`),
+    playerName: decoded.slip.playerName,
+    ...(decoded.slip.roomId ? { roomId: decoded.slip.roomId } : {}),
+    ...(decoded.slip.roomToken ? { roomToken: decoded.slip.roomToken } : {})
   };
 }

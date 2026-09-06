@@ -12,7 +12,8 @@ import {
   voteOrder
 } from "../lib/gameEngine";
 import { clearCurrentGame, currentGameKey, loadCurrentGameState, saveCurrentGame } from "../lib/gamePersistence";
-import { importSongSlip } from "../lib/songSlip";
+import QRCode from "qrcode";
+import { createRoomInvite, encodeRoomInvite, importSongSlip } from "../lib/songSlip";
 import { normalizeYouTubeLink } from "../lib/youtube";
 import type { Game, Player, Submission } from "../lib/types";
 
@@ -20,7 +21,7 @@ const qrScannerWorkerPath = new URL("qr-scanner/qr-scanner-worker.min.js", impor
 QrScanner.WORKER_PATH = qrScannerWorkerPath;
 
 type SetupPlayer = { id: string; name: string; links: string[] };
-type SetupScreen = "roster" | "private" | "handoff" | "ready";
+type SetupScreen = "roster" | "invite" | "private" | "handoff" | "ready";
 
 const starter: SetupPlayer[] = [
   {
@@ -75,10 +76,15 @@ export function GamePage() {
 function Setup({ onStart }: { onStart: (game: Game) => void }) {
   const [theme, setTheme] = useState("Monsoon night");
   const [songCount, setSongCount] = useState(3);
+  const [hostName, setHostName] = useState("Host");
+  const [playerCount, setPlayerCount] = useState(4);
   const [players, setPlayers] = useState<SetupPlayer[]>(starter);
   const [screen, setScreen] = useState<SetupScreen>("roster");
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
   const [pendingNextPlayerIndex, setPendingNextPlayerIndex] = useState<number | null>(null);
+  const [roomId, setRoomId] = useState("");
+  const [roomToken, setRoomToken] = useState("");
+  const [roomQrDataUrl, setRoomQrDataUrl] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("Set the roster, then hand the phone around one player at a time.");
   const [importPayload, setImportPayload] = useState("");
@@ -88,6 +94,11 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
   const [importState, setImportState] = useState<"idle" | "scanning" | "blocked">("idle");
   const importVideoRef = useRef<HTMLVideoElement | null>(null);
   const importScannerRef = useRef<QrScanner | null>(null);
+
+  const roomInvite = roomId && roomToken
+    ? createRoomInvite({ roomId, roomToken, theme, songsPerPlayer: songCount, playerCount })
+    : null;
+  const roomPayload = roomInvite ? encodeRoomInvite(roomInvite) : "";
 
   function updateSongCount(nextCount: number) {
     setSongCount(nextCount);
@@ -133,11 +144,6 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
     const names = players.map((player) => player.name.trim());
     if (names.some((name) => name.length < 1)) {
       return "Give every player a display name.";
-    }
-
-    const uniqueNames = new Set(names.map((name) => name.toLowerCase()));
-    if (uniqueNames.size !== names.length) {
-      return "Use distinct player names before starting.";
     }
 
     return "";
@@ -236,14 +242,19 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
       return false;
     }
 
+    if (result.roomId !== roomId || result.roomToken !== roomToken) {
+      setImportError("This submission belongs to a different room. Ask the player to scan this room's QR first.");
+      return false;
+    }
+
     setPlayers((current) =>
-      current.map((player, index) => (index === currentPlayerIndex ? { ...player, links: result.links } : player))
+      current.map((player, index) => (index === currentPlayerIndex ? { ...player, name: index === 0 ? player.name : result.playerName, links: result.links } : player))
     );
     setImportPayload("");
     setImportedPlayerId(players[currentPlayerIndex].id);
     setImportError("");
-    setImportMessage(`Imported ${result.links.length} songs for ${players[currentPlayerIndex].name}.`);
-    setMessage(`Imported ${result.links.length} songs for ${players[currentPlayerIndex].name}.`);
+    setImportMessage(`Imported ${result.links.length} songs for ${result.playerName}.`);
+    setMessage(`Imported ${result.links.length} songs for ${result.playerName}.`);
     return true;
   }
 
@@ -279,16 +290,40 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
     };
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    if (screen !== "invite" || !roomPayload) return;
+    QRCode.toDataURL(roomPayload, { errorCorrectionLevel: "M", margin: 1, scale: 8 })
+      .then((dataUrl: string) => { if (active) setRoomQrDataUrl(dataUrl); })
+      .catch(() => { if (active) setRoomQrDataUrl(""); });
+    return () => { active = false; };
+  }, [roomPayload, screen]);
+
+  if (screen === "invite") {
+    return (
+      <section className="mx-auto max-w-3xl sheet">
+        <p className="round-marker">Host · Step 2 of 4</p>
+        <h2 className="mt-2 text-3xl font-semibold text-[#18211f]">Everyone: scan this room QR</h2>
+        <p className="mt-3 text-sm leading-7 text-[#18211f]">
+          Keep this screen open while every player scans it on their own phone. It shares the theme and songs-per-player setting.
+        </p>
+        {roomQrDataUrl ? <img src={roomQrDataUrl} alt="Room invite QR code" className="mx-auto mt-6 h-64 w-64 rounded-md bg-white p-3" /> : <div className="mx-auto mt-6 flex h-64 w-64 items-center justify-center rounded-md bg-[#e2e9bb] text-sm text-[#536056]">Generating room QR…</div>}
+        <p className="mt-5 text-center text-sm text-[#536056]">Players should scan this QR from the Player setup screen.</p>
+        <button type="button" onClick={() => { setCurrentPlayerIndex(0); setScreen("private"); setMessage(`Add your own songs, ${hostName}.`); }} className="mt-6 rounded-md bg-[#ef7657] action px-5 py-3 text-sm font-semibold text-[#18211f]">Everyone has scanned — add my songs</button>
+      </section>
+    );
+  }
+
   if (screen === "handoff" && nextPlayer) {
     return (
       <section className="mx-auto max-w-3xl sheet">
         <p className="round-marker">Host · Step 2 of 3</p>
-        <h2 className="mt-2 text-3xl font-semibold text-[#18211f]">Next: {nextPlayer.name}</h2>
+        <h2 className="mt-2 text-3xl font-semibold text-[#18211f]">Collect Player {pendingNextPlayerIndex! + 1}</h2>
         <p className="mt-3 text-sm leading-7 text-[#18211f]">
-          {message} Give the phone to {nextPlayer.name} only after the previous player has finished.
+          {message} Keep the host phone with you. Ask that player to show their submission QR, then scan it on this phone.
         </p>
         <div className="mt-6 rounded-md border border-[#7b846f] bg-[#e2e9bb] p-4">
-          <p className="text-sm text-[#18211f]">The previous player&apos;s links are locked now.</p>
+          <p className="text-sm text-[#18211f]">Everyone can prepare at the same time. The host collects submissions one at a time.</p>
         </div>
         <button
           type="button"
@@ -303,7 +338,7 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
           }}
           className="mt-6 rounded-md bg-[#d5e467] action px-5 py-3 text-sm font-semibold text-[#18211f]"
         >
-          Continue
+          Scan Player {pendingNextPlayerIndex! + 1} submission
         </button>
       </section>
     );
@@ -509,12 +544,13 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
 
   return (
     <section className="mx-auto max-w-4xl sheet">
-      <p className="round-marker">Host setup · 1 of 2</p>
+      <p className="round-marker">Host · Step 1 of 4</p>
       <h2 className="mt-2 text-3xl font-semibold text-[#18211f]">Set up the room</h2>
       <p className="mt-3 text-sm leading-7 text-[#18211f]">
-        Choose a theme, set the song count, and add everyone who is playing. Songs come next, one player at a time, on the shared phone.
+        Set the room rules once. Everyone else will receive them by scanning the room QR.
       </p>
-      <div className="mt-6 grid gap-4 sm:grid-cols-[1fr_auto]">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+        <Field label="Your name" value={hostName} onChange={setHostName} />
         <Field label="Theme" value={theme} onChange={setTheme} />
         <label className="space-y-2">
           <span className="block text-xs uppercase tracking-normal text-[#536056]">Songs per player</span>
@@ -532,72 +568,39 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
         </label>
       </div>
 
-      <div className="mt-6 space-y-3">
-        {players.map((player, index) => (
-          <div key={player.id} className="rounded-md border border-[#7b846f] bg-[#faf8f0] p-4">
-            <input
-              aria-label={`Player ${index + 1} name`}
-              value={player.name}
-              onChange={(event) => updatePlayer(index, { name: event.target.value })}
-              className="w-full rounded-xl border border-[#7b846f] bg-[#faf8f0] px-3 py-2 text-sm text-[#18211f] outline-none"
-            />
-            <p className="mt-2 text-xs text-[#536056]">Songs will be added privately after the roster is ready.</p>
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-4 flex flex-wrap gap-3">
-        <button
-          type="button"
-          onClick={() =>
-            setPlayers((current) =>
-              current.length >= 10
-                ? current
-                : [
-                    ...current,
-                    {
-                      id: `p-${Date.now()}`,
-                      name: `Player ${current.length + 1}`,
-                      links: Array.from({ length: songCount }, () => "")
-                    }
-                  ]
-            )
-          }
-          className="rounded-md border border-[#7b846f] bg-[#faf8f0] px-4 py-2 text-sm text-[#18211f]"
-        >
-          Add player
-        </button>
-        {players.length > 3 ? (
-          <button
-            type="button"
-            onClick={() => setPlayers((current) => current.slice(0, -1))}
-            className="rounded-md border border-rose-300/20 bg-rose-300/10 px-4 py-2 text-sm text-[#922c22]"
-          >
-            Remove last
-          </button>
-        ) : null}
-      </div>
+      <label className="mt-6 block max-w-xs space-y-2">
+        <span className="block text-xs uppercase tracking-normal text-[#536056]">Total players, including you</span>
+        <select value={playerCount} onChange={(event) => setPlayerCount(Number(event.target.value))} className="w-full rounded-md border border-[#7b846f] bg-[#faf8f0] px-4 py-3 text-sm text-[#18211f]">
+          {Array.from({ length: 8 }, (_, index) => <option key={index + 3} value={index + 3}>{index + 3} players</option>)}
+        </select>
+      </label>
 
       {error ? <p className="mt-4 text-sm text-[#922c22]">{error}</p> : null}
 
       <button
         type="button"
         onClick={() => {
-          const rosterError = validateRoster();
-          if (rosterError) {
-            setError(rosterError);
+          if (!hostName.trim() || !theme.trim()) {
+            setError("Add your name and a theme before sharing the room.");
             return;
           }
-
+          const nextPlayers: SetupPlayer[] = Array.from({ length: playerCount }, (_, index) => ({
+            id: index === 0 ? "host" : `p-${crypto.randomUUID()}`,
+            name: index === 0 ? hostName.trim() : `Player ${index + 1}`,
+            links: Array.from({ length: songCount }, () => "")
+          }));
+          setPlayers(nextPlayers);
+          setRoomId(crypto.randomUUID());
+          setRoomToken(crypto.randomUUID());
           setCurrentPlayerIndex(0);
-          setPendingNextPlayerIndex(players.length > 1 ? 1 : null);
-          setScreen("private");
+          setPendingNextPlayerIndex(playerCount > 1 ? 1 : null);
+          setScreen("invite");
           setError("");
-          setMessage(`Hand the phone to ${players[0].name} for the first private entry.`);
+          setMessage("Share the room QR, then add your own songs.");
         }}
         className="mt-6 rounded-md bg-[#ef7657] action px-5 py-3 text-sm font-semibold text-[#18211f]"
       >
-        Continue to player songs
+        Generate room QR
       </button>
       <p className="mt-4 text-sm text-[#536056]">{message}</p>
     </section>
