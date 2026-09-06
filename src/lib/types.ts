@@ -60,6 +60,7 @@ export type Round = {
 };
 export type Game = {
   id: string;
+  roomId?: string;
   theme: string;
   songsPerPlayer: number;
   players: Player[];

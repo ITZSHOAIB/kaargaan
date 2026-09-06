@@ -4,6 +4,7 @@ import QrScanner from "qr-scanner";
 import { AlertCircle, Check, Copy, Download, ScanLine, Video } from "lucide-react";
 import { createSongSlip, decodeRoomInvite, encodeEncryptedSongSlip } from "../lib/songSlip";
 import { normalizeYouTubeLink } from "../lib/youtube";
+import { roomCode } from "../lib/room";
 import type { RoomInvite } from "../lib/types";
 
 type LinkRow = { value: string };
@@ -171,6 +172,7 @@ export function PreparePage() {
         </div>
 
         <div className="room-summary mt-6" aria-label="Room settings">
+          <div title={`Full room ID: ${invite.roomId}`}><span>Room</span><strong>{roomCode(invite.roomId)}</strong></div>
           <div><span>Theme</span><strong>{theme}</strong></div>
           <div><span>Your songs</span><strong>{invite.songsPerPlayer}</strong></div>
           <div><span>Players</span><strong>{invite.playerCount}</strong></div>

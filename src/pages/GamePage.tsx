@@ -16,6 +16,7 @@ import { clearCurrentGame, currentGameKey, loadCurrentGameState, saveCurrentGame
 import QRCode from "qrcode";
 import { createRoomInvite, encodeRoomInvite, ENCRYPTED_SLIP_PREFIX, importEncryptedSongSlip, importSongSlip } from "../lib/songSlip";
 import { normalizeYouTubeLink } from "../lib/youtube";
+import { RoomBadge } from "../components/RoomBadge";
 import type { Game, Player, Submission } from "../lib/types";
 import { Select } from "../components/ui/Select";
 
@@ -302,7 +303,9 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
       const game = createGame(
         theme,
         players.map(({ id, name }): Player => ({ id, name: name.trim() })),
-        submissions
+        submissions,
+        Math.random,
+        roomId
       );
       onStart(saveCurrentGame(game));
     } catch (caught) {
@@ -335,6 +338,7 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
     return (
       <section className="mx-auto max-w-3xl sheet">
         <p className="round-marker">Host · Step 2 of 4</p>
+        <RoomBadge roomId={roomId} />
         <h2 className="mt-2 text-3xl font-semibold text-[#18211f]">Everyone: scan this room QR</h2>
         <p className="mt-3 text-sm leading-7 text-[#18211f]">
           Keep this screen open while every player scans it on their own phone. It shares the theme and songs-per-player setting.
@@ -437,6 +441,7 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
       <section className="host-collection-layout grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
         <div className="host-collection-intro order-1 lg:col-span-2">
           <p className="round-marker">Host · Step 2 of 3</p>
+          <RoomBadge roomId={roomId} />
           <h2 className="mt-2 text-3xl font-semibold text-[#18211f]">Collect songs from {currentPlayer.name}</h2>
           <p className="mt-3 text-sm leading-7 text-[#18211f]">
             Ask {currentPlayer.name} to prepare songs on their own phone. Scan their QR in the room, or paste their encrypted entry if they are joining through Discord.
@@ -771,6 +776,7 @@ function Playing({ game, setGame }: { game: Game; setGame: (game: Game | null) =
         <p className="round-marker">
           Round {game.activeRoundIndex + 1} of {game.rounds.length}
         </p>
+        {game.roomId ? <RoomBadge roomId={game.roomId} /> : null}
         <h2 className="mt-2 text-3xl font-semibold text-[#18211f]">Whose song is playing?</h2>
         <div className="playback mt-5 aspect-video">
           <iframe

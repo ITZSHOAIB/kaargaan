@@ -84,10 +84,14 @@ main { padding:32px 0 48px; }
 .host-collection-footer { display:flex; align-items:center; flex-wrap:wrap; gap:12px; padding:0 4px; }
 .host-collection-footer > .mt-6 { margin-top:0; }
 .host-collection-footer > .mt-4 { margin-top:0; }
-.room-summary { display:grid; grid-template-columns:1.5fr repeat(2,1fr); gap:1px; border:1px solid var(--ink); background:var(--ink); }
+.room-summary { display:grid; grid-template-columns:1.2fr 1.5fr repeat(2,1fr); gap:1px; border:1px solid var(--ink); background:var(--ink); }
 .room-summary > div { display:grid; gap:4px; min-width:0; padding:12px; background:#e2e9bb; }
 .room-summary span { color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
 .room-summary strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:14px; }
+.room-badge { display:flex; align-items:center; flex-wrap:wrap; gap:7px 9px; width:max-content; max-width:100%; margin-top:10px; padding:7px 10px; border:1px solid var(--ink); border-radius:5px; background:var(--lime); }
+.room-badge span { color:var(--muted); font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; }
+.room-badge strong { font-size:14px; letter-spacing:.1em; }
+.room-badge small { color:var(--muted); font-size:11px; }
 .song-entry { padding:12px; border:1px solid #a6ad99; border-radius:7px; background:var(--sheet); }
 .song-entry.is-valid { border-color:#6d865b; }
 .song-entry.has-error { border-color:#a44231; background:#fff4ef; }
@@ -118,7 +122,7 @@ main { padding:32px 0 48px; }
  .resume-banner { align-items:stretch; flex-direction:column; }
  .sheet { padding:20px; }
  .sheet h2 { font-size:28px; }
- .room-summary { grid-template-columns:1.35fr repeat(2,1fr); }
+ .room-summary { grid-template-columns:repeat(2,minmax(0,1fr)); }
  .room-summary > div { padding:10px; }
  .room-summary strong { font-size:13px; }
  .page-footer span:last-child { display:none; }

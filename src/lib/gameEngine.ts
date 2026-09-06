@@ -2,14 +2,14 @@ import type { Game, Player, Round, RoundResult, Submission } from "./types";
 
 const id = (prefix: string) => `${prefix}-${crypto.randomUUID()}`;
 
-export function createGame(theme: string, players: Player[], submissions: Submission[], random = Math.random): Game {
+export function createGame(theme: string, players: Player[], submissions: Submission[], random = Math.random, roomId?: string): Game {
   const shuffled = [...submissions];
   for (let index = shuffled.length - 1; index > 0; index -= 1) {
     const swap = Math.floor(random() * (index + 1));
     [shuffled[index], shuffled[swap]] = [shuffled[swap], shuffled[index]];
   }
   const rounds = shuffled.map((submission): Round => ({ id: id("round"), submissionId: submission.id, phase: "listening", votes: {} }));
-  return { id: id("game"), theme: theme.trim(), songsPerPlayer: submissions.length / Math.max(players.length, 1), players, submissions, rounds, activeRoundIndex: 0, status: "playing", saveRevision: 0 };
+  return { id: id("game"), ...(roomId ? { roomId } : {}), theme: theme.trim(), songsPerPlayer: submissions.length / Math.max(players.length, 1), players, submissions, rounds, activeRoundIndex: 0, status: "playing", saveRevision: 0 };
 }
 
 export function beginVoting(game: Game): Game {
