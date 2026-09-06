@@ -88,14 +88,9 @@ main { padding:32px 0 48px; }
 .room-summary > div { display:grid; gap:4px; min-width:0; padding:12px; background:#e2e9bb; }
 .room-summary span { color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
 .room-summary strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:14px; }
-.room-badge { display:flex; align-items:center; flex-wrap:wrap; gap:7px 9px; width:max-content; max-width:100%; margin-top:10px; padding:7px 10px; border:1px solid var(--ink); border-radius:5px; background:var(--lime); }
-.room-badge span { color:var(--muted); font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; }
-.room-badge strong { font-size:14px; letter-spacing:.1em; }
-.room-badge small { color:var(--muted); font-size:11px; }
-.room-subheader { display:flex; align-items:center; flex-wrap:wrap; gap:8px 12px; margin:-12px 0 24px; padding:10px 14px; border:1px solid var(--ink); border-radius:6px; background:var(--lime); color:var(--ink); }
+.room-subheader { display:flex; align-items:center; justify-content:flex-end; gap:9px; margin:-32px -24px 24px; padding:8px 24px; border:1px solid var(--ink); border-top:0; border-radius:0 0 6px 6px; background:var(--lime); color:var(--ink); }
 .room-subheader span { color:var(--muted); font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
 .room-subheader strong { font-size:15px; letter-spacing:.12em; }
-.room-subheader small { color:var(--muted); font-size:12px; }
 .song-entry { padding:12px; border:1px solid #a6ad99; border-radius:7px; background:var(--sheet); }
 .song-entry.is-valid { border-color:#6d865b; }
 .song-entry.has-error { border-color:#a44231; background:#fff4ef; }
@@ -113,7 +108,6 @@ main { padding:32px 0 48px; }
 .stage-sheet { background:var(--ink); color:var(--sheet); border-color:var(--ink); overflow:hidden; }
 .stage-topline { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; flex-wrap:wrap; }
 .stage-sheet .round-marker { margin-bottom:0; }
-.stage-sheet .room-badge { margin-top:0; }
 .stage-kicker { color:var(--muted); font-size:11px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
 .stage-sheet .stage-kicker { color:#c7d2ed; margin-top:28px; }
 .stage-title { margin-top:7px; color:var(--sheet); font-size:clamp(32px,4vw,48px); line-height:1.02; }
@@ -163,6 +157,7 @@ main { padding:32px 0 48px; }
  .sheet { padding:20px; }
  .sheet h2 { font-size:28px; }
  .room-summary { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ .room-subheader { margin:-22px -16px 20px; padding:8px 16px; }
  .room-summary > div { padding:10px; }
  .room-summary strong { font-size:13px; }
  .stage-sheet { padding:20px; }
