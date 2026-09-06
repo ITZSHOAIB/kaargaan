@@ -41,9 +41,9 @@ test("tabletop screens and round controls fit phone and desktop", async ({ page 
     }
     await page.screenshot({ path: `/tmp/kaargaan-voting-${width}.png`, fullPage: true });
     await page.getByRole("button", { name: "Reveal song owner" }).click();
-    await expect(page.locator(".reveal")).toContainText("brought this song");
+    await expect(page.getByRole("heading", { name: /brought this song/ })).toBeVisible();
     await page.reload();
-    await expect(page.locator(".reveal")).toContainText("brought this song");
+    await expect(page.getByRole("heading", { name: /brought this song/ })).toBeVisible();
     await page.getByText("Game controls", { exact: true }).click();
     await page.getByRole("button", { name: "End game", exact: true }).click();
     await page.getByRole("button", { name: "End game", exact: true }).click();

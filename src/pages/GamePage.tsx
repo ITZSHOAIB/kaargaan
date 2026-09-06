@@ -17,7 +17,7 @@ import QRCode from "qrcode";
 import { createRoomInvite, encodeRoomInvite, ENCRYPTED_SLIP_PREFIX, importEncryptedSongSlip, importSongSlip } from "../lib/songSlip";
 import { normalizeYouTubeLink } from "../lib/youtube";
 import { RoomSubheader } from "../components/RoomBadge";
-import type { Game, Player, Submission } from "../lib/types";
+import type { Game, Player, Round, Submission } from "../lib/types";
 import { Select } from "../components/ui/Select";
 
 const qrScannerWorkerPath = new URL("qr-scanner/qr-scanner-worker.min.js", import.meta.url).toString();
@@ -690,7 +690,6 @@ function Playing({ game, setGame }: { game: Game; setGame: (game: Game | null) =
   const round = currentRound(game);
   const submission = game.submissions.find((candidate) => candidate.id === round?.submissionId);
   const scores = standings(game);
-  const orderedVoters = voteOrder(game);
 
   function commit(next: Game, status?: string) {
     try {
@@ -776,173 +775,142 @@ function Playing({ game, setGame }: { game: Game; setGame: (game: Game | null) =
   const allVoted = voteCount === game.players.length;
   const phaseLabel = round.phase === "listening" ? "Listen first" : round.phase === "voting" ? "Voting open" : round.phase === "revealed" ? "Owner revealed" : "Round skipped";
 
-  return (
-    <>
-    {game.roomId ? <RoomSubheader roomId={game.roomId} /> : null}
-    <section className="game-shell grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
-      <div className="sheet stage-sheet">
-        {persistenceError ? <p className="mb-4 rounded-md border border-rose-300/20 bg-rose-300/10 px-4 py-3 text-sm text-[#922c22]">{persistenceError}</p> : null}
-        <div className="stage-topline">
-          <p className="round-marker">Round {game.activeRoundIndex + 1} <span>of {game.rounds.length}</span></p>
-        </div>
-        <p className="stage-kicker">The mystery track</p>
-        <h2 className="stage-title">Whose song is playing?</h2>
-        <div className="stage-frame mt-5">
-          <div className="stage-frame-bar"><span>Now playing</span><span>Track {game.activeRoundIndex + 1}</span></div>
-          <div className="playback aspect-video">
-            <iframe
-              title="Current song"
-              className="h-full w-full"
-              src={`https://www.youtube.com/embed/${submission.videoId}`}
-              allow="autoplay; encrypted-media"
-            />
-          </div>
-        </div>
-        <div className="stage-status-row">
-          <span className={`phase-chip phase-${round.phase}`}>{phaseLabel}</span>
-          <p role="status" className={round.phase === "revealed" ? "reveal" : ""}>
-            {round.phase === "revealed"
-              ? `${owner?.name} brought this song!`
-              : round.phase === "skipped"
-                ? "Skipped. No points this round."
-                : message}
-          </p>
-        </div>
-        <div className="stage-actions">
-          {round.phase === "listening" ? (
-            <>
-              <a
-                href={`https://www.youtube.com/watch?v=${submission.videoId}`}
-                target="_blank"
-                rel="noreferrer"
-                className="button primary"
-              >
-                Open playback
-              </a>
-              <button
-                type="button"
-                onClick={() => {
-                  try {
-                    commit(beginVoting(game), "Voting is open. Record one guess per player.");
-                  } catch (caught) {
-                    setMessage(caught instanceof Error ? caught.message : "Unable to open voting.");
-                  }
-                }}
-                className="button"
-              >
-                Open voting
-              </button>
-            </>
-          ) : null}
-          {round.phase !== "revealed" && round.phase !== "skipped" ? (
-            <button
-              type="button"
-              onClick={() => commit(skip(game), "Round skipped.")}
-              className="button danger-button"
-            >
-              Skip round
-            </button>
-          ) : null}
-        </div>
-      </div>
+  const endGame = () => commit({ ...game, status: "completed", endedEarly: true }, "Game ended. Final standings are ready.");
 
-      <aside className="sheet ledger vote-sheet">
-        <div className="vote-heading">
-          <p className="stage-kicker">Room call</p>
-          <h3>Who picked it?</h3>
-          <p>Make your guess, then change it freely until the reveal.</p>
-        </div>
-        <div className="vote-meter" aria-label={`${voteCount} of ${game.players.length} votes recorded`}>
-          <strong>{voteCount}<span>/{game.players.length}</span></strong>
-          <div><span>Votes recorded</span><div className="vote-dots">{game.players.map((player) => <i key={player.id} className={round.votes[player.id] ? "filled" : ""} />)}</div></div>
-        </div>
-        {round.phase === "listening" ? <div className="vote-waiting">
-          <span className="phase-chip phase-listening">Listen first</span>
-          <strong>Let the room hear the track.</strong>
-          <p>Open voting when everyone is ready to make a call.</p>
-        </div> : null}
-        {round.phase === "voting" ? <div className="vote-board">
-          {orderedVoters.map((voter) => (
-            <fieldset key={voter.id} className="vote-row" data-voter-id={voter.id}>
-              <legend className="text-xs uppercase tracking-normal text-[#536056]">{voter.name}'s guess</legend>
-              <div className="vote-options mt-2">
-                {game.players.filter((player) => player.id !== voter.id).map((candidate) => {
-                  const selected = round.votes[voter.id] === candidate.id;
-                  return (
-                    <button
-                      key={candidate.id}
-                      type="button"
-                      className={`vote-option${selected ? " selected" : ""}`}
-                      aria-label={`${voter.name} votes for ${candidate.name}`}
-                      aria-pressed={selected}
-                      disabled={round.phase !== "voting"}
-                      onClick={() => {
-                        try {
-                          commit(recordVote(game, voter.id, candidate.id), "Vote recorded.");
-                        } catch (caught) {
-                          setMessage(caught instanceof Error ? caught.message : "Vote rejected.");
-                        }
-                      }}
-                    >
-                      {candidate.name}
-                    </button>
-                  );
-                })}
-              </div>
-            </fieldset>
-          ))}
-        </div> : null}
-        {round.phase === "voting" ? (
-          <button
-            type="button"
-            disabled={!allVoted}
-            onClick={() => {
-              try {
-                commit(reveal(game), `Reveal: ${owner?.name ?? "Unknown"} owns this song.`);
-              } catch (caught) {
-                setMessage(caught instanceof Error ? caught.message : "Reveal unavailable.");
-              }
-            }}
-            className="mt-5 w-full rounded-md bg-[#d5e467] action px-4 py-3 text-sm font-semibold text-[#18211f] disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            Reveal song owner
-          </button>
-        ) : null}
-        {round.phase === "revealed" || round.phase === "skipped" ? (
-          <button
-            type="button"
-            onClick={() => commit(nextRound(game), game.activeRoundIndex + 1 === game.rounds.length ? "Game complete." : "Next round ready.")}
-            className="mt-5 w-full rounded-md bg-[#c7d2ed] action px-4 py-3 text-sm font-semibold text-[#18211f]"
-          >
-            {game.activeRoundIndex + 1 === game.rounds.length ? "Show standings" : "Next round"}
-          </button>
-        ) : null}
-        <details className="score-details mt-6 border-t border-[#7b846f] pt-5">
-          <summary>Live scores</summary>
-          <div className="mt-3 space-y-2">
-            {scores.map((player) => <div key={player.id} className="flex justify-between text-sm"><span className="text-[#18211f]">{player.name}</span><span className="text-[#18211f]">{player.score}</span></div>)}
-          </div>
-        </details>
-        <details className="score-details mt-5 border-t border-[#7b846f] pt-5">
-          <summary>Game controls</summary>
-          <div className="mt-3">
-          {confirmEnd ? (
-            <div className="space-y-3">
-              <p className="text-sm text-[#922c22]">End this game and show the current standings?</p>
-              <div className="flex gap-2">
-                <button type="button" onClick={() => commit({ ...game, status: "completed", endedEarly: true }, "Game ended. Final standings are ready.")} className="rounded-md bg-[#ef7657] action px-3 py-2 text-sm font-semibold text-[#18211f]">End game</button>
-                <button type="button" onClick={() => setConfirmEnd(false)} className="rounded-md border border-[#7b846f] bg-[#faf8f0] px-3 py-2 text-sm text-[#18211f]">Keep playing</button>
-              </div>
-            </div>
-          ) : (
-            <button type="button" onClick={() => setConfirmEnd(true)} className="rounded-md border border-[#7b846f] bg-[#faf8f0] px-3 py-2 text-sm text-[#536056]">End game</button>
-          )}
-          </div>
-        </details>
-      </aside>
-    </section>
-    </>
-  );
+  if (round.phase === "listening") {
+    return <>
+      {game.roomId ? <RoomSubheader roomId={game.roomId} /> : null}
+      <ListeningScreen game={game} submission={submission} message={message} persistenceError={persistenceError} scores={scores} phaseLabel={phaseLabel} onOpenVoting={() => {
+        try { commit(beginVoting(game), "Voting is open. Record one guess per player."); }
+        catch (caught) { setMessage(caught instanceof Error ? caught.message : "Unable to open voting."); }
+      }} onSkip={() => commit(skip(game), "Round skipped.")} onEnd={endGame} confirmEnd={confirmEnd} setConfirmEnd={setConfirmEnd} />
+    </>;
+  }
+
+  if (round.phase === "voting") {
+    return <>
+      {game.roomId ? <RoomSubheader roomId={game.roomId} /> : null}
+      <VotingScreen game={game} round={round} scores={scores} voteCount={voteCount} allVoted={allVoted} onVote={(voterId, ownerId) => {
+        try { commit(recordVote(game, voterId, ownerId), "Vote recorded."); }
+        catch (caught) { setMessage(caught instanceof Error ? caught.message : "Vote rejected."); }
+      }} onReveal={() => {
+        try { commit(reveal(game), `Reveal: ${owner?.name ?? "Unknown"} owns this song.`); }
+        catch (caught) { setMessage(caught instanceof Error ? caught.message : "Reveal unavailable."); }
+      }} onEnd={endGame} confirmEnd={confirmEnd} setConfirmEnd={setConfirmEnd} />
+    </>;
+  }
+
+  return <>
+    {game.roomId ? <RoomSubheader roomId={game.roomId} /> : null}
+    <ResultScreen game={game} round={round} owner={owner} scores={scores} onNext={() => commit(nextRound(game), game.activeRoundIndex + 1 === game.rounds.length ? "Game complete." : "Next round ready.")} onEnd={endGame} confirmEnd={confirmEnd} setConfirmEnd={setConfirmEnd} />
+  </>;
+
+}
+
+type ScoreEntry = Player & { score: number };
+
+function RoundStepper({ active }: { active: "listening" | "voting" | "result" }) {
+  const steps = [["listening", "Listen"], ["voting", "Vote"], ["result", "Reveal"]] as const;
+  return <ol className="round-stepper" aria-label="Round steps">
+    {steps.map(([key, label], index) => <li key={key} className={key === active ? "active" : ""}>
+      <span>{index + 1}</span>{label}
+    </li>)}
+  </ol>;
+}
+
+function ScoreStrip({ scores }: { scores: ScoreEntry[] }) {
+  return <section className="score-strip" aria-label="Current scores">
+    <div className="score-strip-heading"><span>Scoreboard</span><small>After revealed rounds</small></div>
+    <div className="score-strip-list">
+      {scores.map((player, index) => <div key={player.id} className={index === 0 ? "leader" : ""}>
+        <span className="score-rank">{index + 1}</span><span className="score-name">{player.name}</span><strong>{player.score}</strong>
+      </div>)}
+    </div>
+  </section>;
+}
+
+function GameEndControl({ onEnd, confirmEnd, setConfirmEnd }: { onEnd: () => void; confirmEnd: boolean; setConfirmEnd: (value: boolean) => void }) {
+  return <details className="game-end-control">
+    <summary>Game controls</summary>
+    {confirmEnd ? <div className="mt-3 space-y-3">
+      <p className="text-sm text-[#922c22]">End this game and show the current standings?</p>
+      <div className="flex flex-wrap gap-2">
+        <button type="button" onClick={onEnd} className="button primary">End game</button>
+        <button type="button" onClick={() => setConfirmEnd(false)} className="button">Keep playing</button>
+      </div>
+    </div> : <button type="button" onClick={() => setConfirmEnd(true)} className="mt-3 button">End game</button>}
+  </details>;
+}
+
+function StageFrame({ submission }: { submission: Submission }) {
+  return <div className="stage-frame mt-5">
+    <div className="stage-frame-bar"><span>Now playing</span><span>Mystery track</span></div>
+    <div className="playback aspect-video">
+      <iframe title="Current song" className="h-full w-full" src={`https://www.youtube.com/embed/${submission.videoId}`} allow="autoplay; encrypted-media" />
+    </div>
+  </div>;
+}
+
+function ListeningScreen({ game, submission, message, persistenceError, scores, phaseLabel, onOpenVoting, onSkip, onEnd, confirmEnd, setConfirmEnd }: {
+  game: Game; submission: Submission; message: string; persistenceError: string; scores: ScoreEntry[]; phaseLabel: string;
+  onOpenVoting: () => void; onSkip: () => void; onEnd: () => void; confirmEnd: boolean; setConfirmEnd: (value: boolean) => void;
+}) {
+  return <section className="game-screen listening-screen">
+    <div className="sheet stage-sheet">
+      {persistenceError ? <p className="mb-4 rounded-md border border-rose-300/20 bg-rose-300/10 px-4 py-3 text-sm text-[#922c22]">{persistenceError}</p> : null}
+      <RoundStepper active="listening" />
+      <div className="stage-topline"><p className="round-marker">Round {game.activeRoundIndex + 1} <span>of {game.rounds.length}</span></p><span className="phase-chip phase-listening">{phaseLabel}</span></div>
+      <p className="stage-kicker">The mystery track</p><h2 className="stage-title">Listen closely.</h2>
+      <p className="stage-lede">Play the song for the room. Keep the owner hidden until everyone has made their call.</p>
+      <StageFrame submission={submission} />
+      <p role="status" className="stage-status-copy">{message}</p>
+      <div className="stage-actions"><a href={`https://www.youtube.com/watch?v=${submission.videoId}`} target="_blank" rel="noreferrer" className="button primary">Open playback</a><button type="button" onClick={onOpenVoting} className="button">Open voting</button><button type="button" onClick={onSkip} className="button danger-button">Skip round</button></div>
+    </div>
+    <ScoreStrip scores={scores} />
+    <GameEndControl onEnd={onEnd} confirmEnd={confirmEnd} setConfirmEnd={setConfirmEnd} />
+  </section>;
+}
+
+function VotingScreen({ game, round, scores, voteCount, allVoted, onVote, onReveal, onEnd, confirmEnd, setConfirmEnd }: {
+  game: Game; round: Round; scores: ScoreEntry[]; voteCount: number; allVoted: boolean;
+  onVote: (voterId: string, ownerId: string) => void; onReveal: () => void; onEnd: () => void; confirmEnd: boolean; setConfirmEnd: (value: boolean) => void;
+}) {
+  const orderedVoters = voteOrder(game);
+  return <section className="game-screen voting-screen">
+    <div className="sheet vote-sheet">
+      <RoundStepper active="voting" />
+      <p className="stage-kicker">Room call</p><h2 className="screen-title">Who picked the song?</h2>
+      <p className="screen-lede">Choose a player for each guess. Tap again anytime before the reveal.</p>
+      <div className="vote-meter" aria-label={`${voteCount} of ${game.players.length} votes recorded`}><strong>{voteCount}<span>/{game.players.length}</span></strong><div><span>Votes recorded</span><div className="vote-dots">{game.players.map((player) => <i key={player.id} className={round.votes[player.id] ? "filled" : ""} />)}</div></div></div>
+      <div className="vote-board">
+        {orderedVoters.map((voter) => <fieldset key={voter.id} className="vote-row" data-voter-id={voter.id}>
+          <legend className="text-xs uppercase tracking-normal text-[#536056]">{voter.name}&apos;s guess</legend>
+          <div className="vote-options mt-2">{game.players.filter((player) => player.id !== voter.id).map((candidate) => <button key={candidate.id} type="button" className={`vote-option${round.votes[voter.id] === candidate.id ? " selected" : ""}`} aria-label={`${voter.name} votes for ${candidate.name}`} aria-pressed={round.votes[voter.id] === candidate.id} onClick={() => onVote(voter.id, candidate.id)}>{candidate.name}</button>)}</div>
+        </fieldset>)}
+      </div>
+      <button type="button" disabled={!allVoted} onClick={onReveal} className="mt-6 w-full rounded-md bg-[#d5e467] action px-4 py-3 text-sm font-semibold text-[#18211f] disabled:cursor-not-allowed disabled:opacity-40">Reveal song owner</button>
+    </div>
+    <ScoreStrip scores={scores} />
+    <GameEndControl onEnd={onEnd} confirmEnd={confirmEnd} setConfirmEnd={setConfirmEnd} />
+  </section>;
+}
+
+function ResultScreen({ game, round, owner, scores, onNext, onEnd, confirmEnd, setConfirmEnd }: {
+  game: Game; round: Round; owner?: Player; scores: ScoreEntry[]; onNext: () => void; onEnd: () => void; confirmEnd: boolean; setConfirmEnd: (value: boolean) => void;
+}) {
+  const revealed = round.phase === "revealed";
+  return <section className="game-screen result-screen">
+    <div className="sheet result-sheet">
+      <RoundStepper active="result" />
+      <p className="stage-kicker">Round result</p>
+      <div className={`result-stamp ${revealed ? "success" : "skipped"}`}>{revealed ? "REVEALED" : "SKIPPED"}</div>
+      <h2 className="screen-title">{revealed ? `${owner?.name ?? "Someone"} brought this song.` : "No points this round."}</h2>
+      <p className="screen-lede">{revealed ? "The room has its answer. Check the scores, then move to the next mystery track." : "Move on when the room is ready."}</p>
+      <button type="button" onClick={onNext} className="mt-6 w-full rounded-md bg-[#c7d2ed] action px-4 py-3 text-sm font-semibold text-[#18211f]">{game.activeRoundIndex + 1 === game.rounds.length ? "Show final standings" : "Next round"}</button>
+    </div>
+    <ScoreStrip scores={scores} />
+    <GameEndControl onEnd={onEnd} confirmEnd={confirmEnd} setConfirmEnd={setConfirmEnd} />
+  </section>;
 }
 
 function Recovery({ error, onReset }: { error: string; onReset: () => void }) {
