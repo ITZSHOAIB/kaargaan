@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowSyntheticDefaultImports": true,
+    "lib": ["ES2022", "WebWorker"]
+  },
+  "include": ["vite.config.ts", "eslint.config.js", "src/**/*.d.ts"]
+}

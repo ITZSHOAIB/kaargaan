@@ -1,0 +1,778 @@
+import { useEffect, useState } from "react";
+import {
+  beginVoting,
+  createGame,
+  currentRound,
+  nextRound,
+  recordVote,
+  reveal,
+  skip,
+  standings,
+  voteOrder
+} from "../lib/gameEngine";
+import { clearCurrentGame, currentGameKey, loadCurrentGameState, saveCurrentGame } from "../lib/gamePersistence";
+import { normalizeYouTubeLink } from "../lib/youtube";
+import type { Game, Player, Submission } from "../lib/types";
+
+type SetupPlayer = { id: string; name: string; links: string[] };
+type SetupScreen = "roster" | "private" | "handoff" | "ready";
+
+const starter: SetupPlayer[] = [
+  {
+    id: "p-asha",
+    name: "Asha",
+    links: [
+      "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "https://www.youtube.com/watch?v=9bZkp7q19f0",
+      "https://www.youtube.com/watch?v=kJQP7kiw5Fk"
+    ]
+  },
+  {
+    id: "p-biren",
+    name: "Biren",
+    links: [
+      "https://www.youtube.com/watch?v=Zi_XLOBDo_Y",
+      "https://www.youtube.com/watch?v=L_jWHffIx5E",
+      "https://www.youtube.com/watch?v=hTWKbfoikeg"
+    ]
+  },
+  {
+    id: "p-chitra",
+    name: "Chitra",
+    links: [
+      "https://www.youtube.com/watch?v=fJ9rUzIMcZQ",
+      "https://www.youtube.com/watch?v=3JZ_D3ELwOQ",
+      "https://www.youtube.com/watch?v=2Vv-BfVoq4g"
+    ]
+  }
+];
+
+export function GamePage() {
+  const [loaded] = useState(() => loadCurrentGameState());
+  const [game, setGame] = useState<Game | null>(loaded.game);
+  const [recoveryCleared, setRecoveryCleared] = useState(false);
+
+  if (game) {
+    return <Playing game={game} setGame={setGame} />;
+  }
+
+  if (loaded.error && !recoveryCleared) {
+    return <Recovery error={loaded.error} onReset={() => {
+      clearCurrentGame();
+      setRecoveryCleared(true);
+      setGame(null);
+    }} />;
+  }
+
+  return <Setup onStart={setGame} />;
+}
+
+function Setup({ onStart }: { onStart: (game: Game) => void }) {
+  const [theme, setTheme] = useState("Monsoon night");
+  const [songCount, setSongCount] = useState(3);
+  const [players, setPlayers] = useState<SetupPlayer[]>(starter);
+  const [screen, setScreen] = useState<SetupScreen>("roster");
+  const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
+  const [pendingNextPlayerIndex, setPendingNextPlayerIndex] = useState<number | null>(null);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("Set the roster, then hand the phone around one player at a time.");
+
+  function updateSongCount(nextCount: number) {
+    setSongCount(nextCount);
+    setPlayers((current) =>
+      current.map((player) => ({
+        ...player,
+        links: Array.from({ length: nextCount }, (_, index) => player.links[index] ?? "")
+      }))
+    );
+  }
+
+  function updatePlayer(index: number, update: Partial<SetupPlayer>) {
+    setPlayers((current) =>
+      current.map((player, i) => (i === index ? { ...player, ...update } : player))
+    );
+  }
+
+  function updateLink(playerIndex: number, linkIndex: number, value: string) {
+    setPlayers((current) =>
+      current.map((player, i) =>
+        i === playerIndex
+          ? {
+              ...player,
+              links: Array.from({ length: Math.max(player.links.length, linkIndex + 1) }, (_, j) =>
+                j === linkIndex ? value : player.links[j] ?? ""
+              )
+            }
+          : player
+      )
+    );
+  }
+
+  function validateRoster() {
+    const themeValue = theme.trim();
+    if (!themeValue) {
+      return "Enter a theme before starting private handoff.";
+    }
+
+    if (players.length < 3 || players.length > 10) {
+      return "Use between 3 and 10 players.";
+    }
+
+    const names = players.map((player) => player.name.trim());
+    if (names.some((name) => name.length < 1)) {
+      return "Give every player a display name.";
+    }
+
+    const uniqueNames = new Set(names.map((name) => name.toLowerCase()));
+    if (uniqueNames.size !== names.length) {
+      return "Use distinct player names before starting.";
+    }
+
+    return "";
+  }
+
+  function validatePlayerLinks(playerIndex: number) {
+    const player = players[playerIndex];
+    const seen = new Set<string>();
+    const normalized = player.links.slice(0, songCount).map((link, songIndex) => {
+      const check = normalizeYouTubeLink(link);
+      if (!check.ok) {
+        throw new Error(`${player.name || `Player ${playerIndex + 1}`}, song ${songIndex + 1}: ${check.error}`);
+      }
+
+      if (seen.has(check.videoId)) {
+        throw new Error(`Use different songs for ${player.name || `Player ${playerIndex + 1}`}.`);
+      }
+
+      seen.add(check.videoId);
+      return check.videoId;
+    });
+
+    const priorIds = new Set(
+      players
+        .slice(0, playerIndex)
+        .flatMap((priorPlayer) => priorPlayer.links.slice(0, songCount))
+        .map((link) => {
+          const check = normalizeYouTubeLink(link);
+          return check.ok ? check.videoId : "";
+        })
+        .filter(Boolean)
+    );
+
+    const duplicate = normalized.find((videoId) => priorIds.has(videoId));
+    if (duplicate) {
+      throw new Error("One of these songs duplicates an earlier submission. Replace it with a different link.");
+    }
+
+    return normalized;
+  }
+
+  function lockCurrentPlayer() {
+    try {
+      validatePlayerLinks(currentPlayerIndex);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Check the links before saving.");
+      return;
+    }
+
+    const nextIndex = currentPlayerIndex + 1;
+    if (nextIndex < players.length) {
+      setPendingNextPlayerIndex(nextIndex);
+      setScreen("handoff");
+      setMessage(`Saved ${players[currentPlayerIndex].name}. Pass the phone to ${players[nextIndex].name}.`);
+      setError("");
+      return;
+    }
+
+    setScreen("ready");
+    setMessage("Everyone is locked in. Start the game when the room is ready.");
+    setError("");
+  }
+
+  function buildSubmissions() {
+    const submissions: Submission[] = [];
+    const seen = new Set<string>();
+
+    for (const [playerIndex, player] of players.entries()) {
+      for (let songIndex = 0; songIndex < songCount; songIndex += 1) {
+        const check = normalizeYouTubeLink(player.links[songIndex] ?? "");
+        if (!check.ok) {
+          throw new Error(`${player.name || `Player ${playerIndex + 1}`}, song ${songIndex + 1}: ${check.error}`);
+        }
+
+        if (seen.has(check.videoId)) {
+          throw new Error("Replace duplicate songs before starting.");
+        }
+
+        seen.add(check.videoId);
+        submissions.push({
+          id: `submission-${player.id}-${songIndex + 1}`,
+          ownerId: player.id,
+          videoId: check.videoId
+        });
+      }
+    }
+
+    return submissions;
+  }
+
+  function startGame() {
+    const rosterError = validateRoster();
+    if (rosterError) {
+      setError(rosterError);
+      setScreen("roster");
+      return;
+    }
+
+    try {
+      const submissions = buildSubmissions();
+      const game = createGame(
+        theme,
+        players.map(({ id, name }): Player => ({ id, name: name.trim() })),
+        submissions
+      );
+      onStart(saveCurrentGame(game));
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Unable to start the game.");
+      setScreen("private");
+    }
+  }
+
+  const currentPlayer = players[currentPlayerIndex];
+  const nextPlayer = pendingNextPlayerIndex !== null ? players[pendingNextPlayerIndex] : null;
+
+  if (screen === "handoff" && nextPlayer) {
+    return (
+      <section className="mx-auto max-w-3xl sheet">
+        <p className="round-marker">Private handoff</p>
+        <h2 className="mt-2 text-3xl font-semibold text-[#18211f]">Hand the phone to {nextPlayer.name}</h2>
+        <p className="mt-3 text-sm leading-7 text-[#18211f]">
+          {message} The next player should fill only their own song links.
+        </p>
+        <div className="mt-6 rounded-md border border-[#7b846f] bg-[#e2e9bb] p-4">
+          <p className="text-sm text-[#18211f]">The previous player&apos;s links are locked now.</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            if (pendingNextPlayerIndex !== null) {
+              setCurrentPlayerIndex(pendingNextPlayerIndex);
+            }
+            setPendingNextPlayerIndex(null);
+            setScreen("private");
+            setError("");
+          }}
+          className="mt-6 rounded-md bg-[#d5e467] action px-5 py-3 text-sm font-semibold text-[#18211f]"
+        >
+          Continue
+        </button>
+      </section>
+    );
+  }
+
+  if (screen === "ready") {
+    const completion = players.map((player) => ({
+      name: player.name.trim(),
+      ready: player.links.slice(0, songCount).every((link) => normalizeYouTubeLink(link).ok)
+    }));
+
+    return (
+      <section className="mx-auto max-w-3xl sheet">
+        <p className="round-marker">Setup complete</p>
+        <h2 className="mt-2 text-3xl font-semibold text-[#18211f]">Start the game when everyone is ready</h2>
+        <p className="mt-3 text-sm leading-7 text-[#18211f]">
+          All song links are locked in. The shuffled round order will stay fixed after the game starts.
+        </p>
+        <div className="mt-6 space-y-2">
+          {completion.map((player) => (
+            <div key={player.name} className="flex items-center justify-between rounded-md border border-[#7b846f] bg-[#faf8f0] px-4 py-3">
+              <span className="text-[#18211f]">{player.name}</span>
+              <span className="text-sm text-[#536056]">{player.ready ? "Locked" : "Missing link"}</span>
+            </div>
+          ))}
+        </div>
+        {error ? <p className="mt-4 text-sm text-[#922c22]">{error}</p> : null}
+        <button
+          type="button"
+          onClick={startGame}
+          className="mt-6 rounded-md bg-[#ef7657] action px-5 py-3 text-sm font-semibold text-[#18211f]"
+        >
+          Start game
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setScreen("private");
+            setError("");
+            setMessage("Review the locked songs, then start the game.");
+          }}
+          className="mt-3 ml-3 rounded-md border border-[#7b846f] bg-[#faf8f0] px-4 py-3 text-sm text-[#18211f]"
+        >
+          Review links
+        </button>
+      </section>
+    );
+  }
+
+  if (screen === "private") {
+    return (
+      <section className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="sheet">
+          <p className="round-marker">Private setup</p>
+          <h2 className="mt-2 text-3xl font-semibold text-[#18211f]">{currentPlayer.name}, add your songs</h2>
+          <p className="mt-3 text-sm leading-7 text-[#18211f]">
+            Only the player holding the phone should see these links. Fill them in, save, and pass the phone on.
+          </p>
+          <div className="mt-6 grid gap-4 sm:grid-cols-[1fr_auto]">
+            <Field label="Theme" value={theme} onChange={setTheme} disabled />
+            <label className="space-y-2">
+              <span className="block text-xs uppercase tracking-normal text-[#536056]">Songs per player</span>
+              <select
+                value={songCount}
+                disabled
+                className="w-full rounded-md border border-[#7b846f] bg-[#faf8f0] px-4 py-3 text-sm text-[#18211f]"
+              >
+                <option value={1}>1 song</option>
+                <option value={2}>2 songs</option>
+                <option value={3}>3 songs</option>
+                <option value={4}>4 songs</option>
+                <option value={5}>5 songs</option>
+              </select>
+            </label>
+          </div>
+          <div className="mt-6 space-y-3">
+            {Array.from({ length: songCount }, (_, songIndex) => (
+              <input
+                key={songIndex}
+                aria-label={`${currentPlayer.name} song ${songIndex + 1}`}
+                value={currentPlayer.links[songIndex] ?? ""}
+                onChange={(event) => updateLink(currentPlayerIndex, songIndex, event.target.value)}
+                placeholder={`Song ${songIndex + 1} YouTube link`}
+                className="w-full rounded-xl border border-[#7b846f] bg-[#faf8f0] px-3 py-2 text-sm text-[#18211f] outline-none"
+              />
+            ))}
+          </div>
+          {error ? <p className="mt-4 text-sm text-[#922c22]">{error}</p> : null}
+          <div className="mt-6 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={lockCurrentPlayer}
+              className="rounded-md bg-[#ef7657] action px-5 py-3 text-sm font-semibold text-[#18211f]"
+            >
+              Save and pass
+            </button>
+            <button
+              type="button"
+              onClick={() => setScreen("roster")}
+              className="rounded-md border border-[#7b846f] bg-[#faf8f0] px-4 py-3 text-sm text-[#18211f]"
+            >
+              Back to roster
+            </button>
+          </div>
+          <p className="mt-4 text-sm text-[#536056]">{message}</p>
+        </div>
+
+        <aside className="sheet ledger">
+          <h3 className="text-base font-semibold text-[#18211f]">Handoff order</h3>
+          <p className="mt-2 text-sm text-[#536056]">Each player sees only their own songs. The rest stay hidden.</p>
+          <div className="mt-5 space-y-2">
+            {players.map((player, index) => (
+              <div
+                key={player.id}
+                className={`rounded-md border px-4 py-3 text-sm ${
+                  index === currentPlayerIndex
+                    ? "border-[#18211f] bg-[#faf8f0] text-[#18211f]"
+                    : index < currentPlayerIndex
+                      ? "border-[#7b846f] bg-[#faf8f0] text-[#536056]"
+                      : "border-[#7b846f] bg-white text-[#536056]"
+                }`}
+              >
+                {index + 1}. {player.name}
+                <span className="ml-2 text-xs uppercase tracking-normal">
+                  {index < currentPlayerIndex ? "Locked" : index === currentPlayerIndex ? "Current" : "Waiting"}
+                </span>
+              </div>
+            ))}
+          </div>
+        </aside>
+      </section>
+    );
+  }
+
+  return (
+    <section className="mx-auto max-w-4xl sheet">
+      <p className="round-marker">Set up the room</p>
+      <h2 className="mt-2 text-3xl font-semibold text-[#18211f]">Build the roster before the private handoff starts</h2>
+      <p className="mt-3 text-sm leading-7 text-[#18211f]">
+        Choose a theme, set the song count, and name the players. The next screen will move through the room one phone handoff at a time.
+      </p>
+      <div className="mt-6 grid gap-4 sm:grid-cols-[1fr_auto]">
+        <Field label="Theme" value={theme} onChange={setTheme} />
+        <label className="space-y-2">
+          <span className="block text-xs uppercase tracking-normal text-[#536056]">Songs per player</span>
+          <select
+            value={songCount}
+            onChange={(event) => updateSongCount(Number(event.target.value))}
+            className="w-full rounded-md border border-[#7b846f] bg-[#faf8f0] px-4 py-3 text-sm text-[#18211f]"
+          >
+            <option value={1}>1 song</option>
+            <option value={2}>2 songs</option>
+            <option value={3}>3 songs</option>
+            <option value={4}>4 songs</option>
+            <option value={5}>5 songs</option>
+          </select>
+        </label>
+      </div>
+
+      <div className="mt-6 space-y-3">
+        {players.map((player, index) => (
+          <div key={player.id} className="rounded-md border border-[#7b846f] bg-[#faf8f0] p-4">
+            <input
+              aria-label={`Player ${index + 1} name`}
+              value={player.name}
+              onChange={(event) => updatePlayer(index, { name: event.target.value })}
+              className="w-full rounded-xl border border-[#7b846f] bg-[#faf8f0] px-3 py-2 text-sm text-[#18211f] outline-none"
+            />
+            <div className="mt-3 grid gap-2">
+              {Array.from({ length: songCount }, (_, songIndex) => (
+                <input
+                  key={songIndex}
+                  aria-label={`${player.name} song ${songIndex + 1}`}
+                  value={player.links[songIndex] ?? ""}
+                  onChange={(event) => updateLink(index, songIndex, event.target.value)}
+                  placeholder={`Song ${songIndex + 1} YouTube link`}
+                  className="w-full rounded-xl border border-[#7b846f] bg-[#faf8f0] px-3 py-2 text-sm text-[#18211f] outline-none"
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-3">
+        <button
+          type="button"
+          onClick={() =>
+            setPlayers((current) =>
+              current.length >= 10
+                ? current
+                : [
+                    ...current,
+                    {
+                      id: `p-${Date.now()}`,
+                      name: `Player ${current.length + 1}`,
+                      links: Array.from({ length: songCount }, () => "")
+                    }
+                  ]
+            )
+          }
+          className="rounded-md border border-[#7b846f] bg-[#faf8f0] px-4 py-2 text-sm text-[#18211f]"
+        >
+          Add player
+        </button>
+        {players.length > 3 ? (
+          <button
+            type="button"
+            onClick={() => setPlayers((current) => current.slice(0, -1))}
+            className="rounded-md border border-rose-300/20 bg-rose-300/10 px-4 py-2 text-sm text-[#922c22]"
+          >
+            Remove last
+          </button>
+        ) : null}
+      </div>
+
+      {error ? <p className="mt-4 text-sm text-[#922c22]">{error}</p> : null}
+
+      <button
+        type="button"
+        onClick={() => {
+          const rosterError = validateRoster();
+          if (rosterError) {
+            setError(rosterError);
+            return;
+          }
+
+          setCurrentPlayerIndex(0);
+          setPendingNextPlayerIndex(players.length > 1 ? 1 : null);
+          setScreen("private");
+          setError("");
+          setMessage(`Hand the phone to ${players[0].name} for the first private entry.`);
+        }}
+        className="mt-6 rounded-md bg-[#ef7657] action px-5 py-3 text-sm font-semibold text-[#18211f]"
+      >
+        Begin private handoff
+      </button>
+      <p className="mt-4 text-sm text-[#536056]">{message}</p>
+    </section>
+  );
+}
+
+function Playing({ game, setGame }: { game: Game; setGame: (game: Game | null) => void }) {
+  const [message, setMessage] = useState("Start playback, discuss, then open voting.");
+  const [persistenceError, setPersistenceError] = useState("");
+  const round = currentRound(game);
+  const submission = game.submissions.find((candidate) => candidate.id === round?.submissionId);
+  const scores = standings(game);
+  const orderedVoters = voteOrder(game);
+
+  function commit(next: Game, status?: string) {
+    try {
+      const saved = saveCurrentGame(next);
+      setPersistenceError("");
+      setGame(saved);
+      if (status) {
+        setMessage(status);
+      }
+    } catch (caught) {
+      setPersistenceError(caught instanceof Error ? caught.message : "Unable to save the current game.");
+    }
+  }
+
+  useEffect(() => {
+    function handleStorage(event: StorageEvent) {
+      if (event.key !== currentGameKey()) {
+        return;
+      }
+
+      const latest = loadCurrentGameState().game;
+      if (!latest || latest.id !== game.id || latest.saveRevision === game.saveRevision) {
+        return;
+      }
+
+      setPersistenceError("This game changed in another tab. Reload before making more moves.");
+    }
+
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, [game.id, game.saveRevision]);
+
+  if (game.status === "completed") {
+    const topScore = scores[0]?.score ?? 0;
+    const winners = topScore > 0 ? scores.filter((player) => player.score === topScore) : [];
+
+    return (
+      <section className="mx-auto max-w-3xl sheet">
+        <p className="text-xs uppercase tracking-normal text-[#18211f]">Game complete</p>
+        <h2 className="mt-2 text-3xl font-semibold text-[#18211f]">Final standings</h2>
+        <p className="mt-3 text-sm leading-7 text-[#18211f]">
+          {topScore === 0
+            ? "No scored rounds."
+            : winners.length === 1
+              ? `${winners[0].name} wins with ${topScore} points.`
+              : `Tied winners: ${winners.map((player) => player.name).join(", ")} with ${topScore} points.`}
+        </p>
+        <div className="mt-6 space-y-2">
+          {scores.map((player, index) => (
+            <div
+              key={player.id}
+              className="flex items-center justify-between rounded-md border border-[#7b846f] bg-[#faf8f0] px-4 py-3"
+            >
+              <span className="text-[#18211f]">
+                {index + 1}. {player.name}
+              </span>
+              <span className="text-[#18211f]">{player.score} pts</span>
+            </div>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            clearCurrentGame();
+            setGame(null);
+          }}
+          className="mt-6 rounded-md border border-[#7b846f] bg-[#faf8f0] px-4 py-2 text-sm text-[#18211f]"
+        >
+          New game
+        </button>
+      </section>
+    );
+  }
+
+  if (!round || !submission) {
+    return null;
+  }
+
+  const owner = game.players.find((player) => player.id === submission.ownerId);
+  const allVoted = game.players.every((player) => round.votes[player.id]);
+
+  return (
+    <section className="grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
+      <div className="sheet">
+        {persistenceError ? <p className="mb-4 rounded-md border border-rose-300/20 bg-rose-300/10 px-4 py-3 text-sm text-[#922c22]">{persistenceError}</p> : null}
+        <p className="round-marker">
+          Round {game.activeRoundIndex + 1} of {game.rounds.length}
+        </p>
+        <h2 className="mt-2 text-3xl font-semibold text-[#18211f]">Whose song is playing?</h2>
+        <div className="playback mt-5 aspect-video">
+          <iframe
+            title="Current song"
+            className="h-full w-full"
+            src={`https://www.youtube.com/embed/${submission.videoId}`}
+            allow="autoplay; encrypted-media"
+          />
+        </div>
+        <p role="status" className={round.phase === "revealed" ? "reveal" : "mt-4 text-sm"}>
+          {round.phase === "revealed"
+            ? `${owner?.name} brought this song!`
+            : round.phase === "skipped"
+              ? "Skipped. No points this round."
+              : message}
+        </p>
+        <div className="mt-5 flex flex-wrap gap-3">
+          {round.phase === "listening" ? (
+            <>
+              <a
+                href={`https://www.youtube.com/watch?v=${submission.videoId}`}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-md bg-[#ef7657] action px-4 py-2 text-sm font-semibold text-[#18211f]"
+              >
+                Open playback
+              </a>
+              <button
+                type="button"
+                onClick={() => {
+                  try {
+                    commit(beginVoting(game), "Voting is open. Record one guess per player.");
+                  } catch (caught) {
+                    setMessage(caught instanceof Error ? caught.message : "Unable to open voting.");
+                  }
+                }}
+                className="rounded-md border border-[#7b846f] bg-[#faf8f0] px-4 py-2 text-sm text-[#18211f]"
+              >
+                Open voting
+              </button>
+            </>
+          ) : null}
+          {round.phase !== "revealed" && round.phase !== "skipped" ? (
+            <button
+              type="button"
+              onClick={() => commit(skip(game), "Round skipped.")}
+              className="rounded-md border border-rose-300/20 bg-rose-300/10 px-4 py-2 text-sm text-[#922c22]"
+            >
+              Skip round
+            </button>
+          ) : null}
+        </div>
+      </div>
+
+      <aside className="sheet ledger">
+        <h3 className="text-base font-semibold text-[#18211f]">Votes</h3>
+        <p className="mt-2 text-sm text-[#536056]">
+          The owner must bluff too. Votes stay editable until reveal.
+        </p>
+        <p className="mt-2 text-xs uppercase tracking-normal text-[#536056]">
+          First voter: {orderedVoters[0]?.name ?? "N/A"}
+        </p>
+        <div className="mt-5 space-y-3">
+          {orderedVoters.map((voter) => (
+            <label key={voter.id} className="block">
+              <span className="text-xs uppercase tracking-normal text-[#536056]">{voter.name}</span>
+              <select
+                value={round.votes[voter.id] ?? ""}
+                disabled={round.phase !== "voting"}
+                onChange={(event) => {
+                  try {
+                    commit(recordVote(game, voter.id, event.target.value), "Vote recorded.");
+                  } catch (caught) {
+                    setMessage(caught instanceof Error ? caught.message : "Vote rejected.");
+                  }
+                }}
+                className="mt-2 w-full rounded-xl border border-[#7b846f] bg-[#faf8f0] px-3 py-2 text-sm text-[#18211f]"
+              >
+                <option value="">Choose a player</option>
+                {game.players
+                  .filter((player) => player.id !== voter.id)
+                  .map((player) => (
+                    <option key={player.id} value={player.id}>
+                      {player.name}
+                    </option>
+                  ))}
+              </select>
+            </label>
+          ))}
+        </div>
+        {round.phase === "voting" ? (
+          <button
+            type="button"
+            disabled={!allVoted}
+            onClick={() => {
+              try {
+                commit(reveal(game), `Reveal: ${owner?.name ?? "Unknown"} owns this song.`);
+              } catch (caught) {
+                setMessage(caught instanceof Error ? caught.message : "Reveal unavailable.");
+              }
+            }}
+            className="mt-5 w-full rounded-md bg-[#d5e467] action px-4 py-3 text-sm font-semibold text-[#18211f] disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Reveal song owner
+          </button>
+        ) : null}
+        {round.phase === "revealed" || round.phase === "skipped" ? (
+          <button
+            type="button"
+            onClick={() => commit(nextRound(game), game.activeRoundIndex + 1 === game.rounds.length ? "Game complete." : "Next round ready.")}
+            className="mt-5 w-full rounded-md bg-[#c7d2ed] action px-4 py-3 text-sm font-semibold text-[#18211f]"
+          >
+            {game.activeRoundIndex + 1 === game.rounds.length ? "Show standings" : "Next round"}
+          </button>
+        ) : null}
+        <div className="mt-6 border-t border-[#7b846f] pt-5">
+          <h3 className="text-sm font-semibold text-[#18211f]">Live scores</h3>
+          <div className="mt-3 space-y-2">
+            {scores.map((player) => (
+              <div key={player.id} className="flex justify-between text-sm">
+                <span className="text-[#18211f]">{player.name}</span>
+                <span className="text-[#18211f]">{player.score}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </aside>
+    </section>
+  );
+}
+
+function Recovery({ error, onReset }: { error: string; onReset: () => void }) {
+  return (
+    <section className="mx-auto max-w-3xl sheet">
+      <p className="round-marker">Recovery needed</p>
+      <h2 className="mt-2 text-3xl font-semibold text-[#18211f]">A saved game could not be restored</h2>
+      <p className="mt-3 text-sm leading-7 text-[#18211f]">{error}</p>
+      <p className="mt-3 text-sm leading-7 text-[#536056]">
+        Clear the saved game and start a fresh room. No other state is changed.
+      </p>
+      <button
+        type="button"
+        onClick={onReset}
+        className="mt-6 rounded-md bg-[#ef7657] action px-5 py-3 text-sm font-semibold text-[#18211f]"
+      >
+        Clear saved game
+      </button>
+    </section>
+  );
+}
+
+function Field({
+  label,
+  value,
+  onChange,
+  disabled = false
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <label className="space-y-2">
+      <span className="block text-xs uppercase tracking-normal text-[#536056]">{label}</span>
+      <input
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        disabled={disabled}
+        className="w-full rounded-md border border-[#7b846f] bg-[#faf8f0] px-4 py-3 text-sm text-[#18211f] outline-none"
+      />
+    </label>
+  );
+}

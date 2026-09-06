@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>KaarGaan UI prototype</title>
+  <style>
+    :root { font-family: Inter, ui-sans-serif, system-ui, sans-serif; color: #18211f; background: #eee9dd; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; }
+    button, select, input { font: inherit; }
+    button { cursor: pointer; }
+    .prototype-note { position: fixed; z-index: 20; top: 12px; left: 50%; transform: translateX(-50%); padding: 7px 12px; border: 1px solid #ffffff66; border-radius: 999px; background: #111d1bcc; color: #fff; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; box-shadow: 0 8px 28px #0003; }
+    .variant { min-height: 100vh; padding: 56px 18px 110px; }
+    .wrap { width: min(1120px, 100%); margin: auto; }
+    .eyebrow { margin: 0 0 10px; font-size: 11px; letter-spacing: .2em; text-transform: uppercase; opacity: .65; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { margin-bottom: 8px; font-size: clamp(34px, 7vw, 72px); line-height: .95; letter-spacing: -.06em; }
+    h2 { margin-bottom: 12px; font-size: clamp(26px, 4vw, 48px); line-height: 1; letter-spacing: -.045em; }
+    h3 { margin-bottom: 6px; font-size: 15px; }
+    .muted { opacity: .68; line-height: 1.55; }
+    .button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 18px; border: 0; border-radius: 12px; font-weight: 750; }
+    .button.secondary { background: transparent; border: 1px solid currentColor; }
+    .button.full { width: 100%; }
+    .stack { display: grid; gap: 14px; }
+    .grid { display: grid; gap: 16px; }
+    .player-row { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; padding: 14px 0; border-bottom: 1px solid currentColor; border-color: color-mix(in srgb, currentColor 15%, transparent); }
+    .avatar { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; font-weight: 800; }
+    .score { font-variant-numeric: tabular-nums; font-weight: 800; }
+
+    /* A: tabletop score sheet */
+    .a { background: #eee9dd; color: #18211f; }
+    .a .mast { display: flex; justify-content: space-between; gap: 18px; align-items: end; padding-bottom: 28px; border-bottom: 2px solid #18211f; }
+    .a .round-tag { padding: 9px 12px; background: #d5e467; border-radius: 7px; font-weight: 800; white-space: nowrap; }
+    .a .main { display: grid; grid-template-columns: 1.25fr .75fr; gap: 30px; margin-top: 30px; }
+    .a .record { padding: clamp(18px, 4vw, 34px); background: #faf8f0; border: 1px solid #18211f; box-shadow: 7px 7px 0 #18211f; }
+    .a .cover { display: grid; place-items: center; aspect-ratio: 16 / 8; margin: 18px 0 22px; background: #c7d2ed; border: 1px solid #18211f; color: #18211f; }
+    .a .cover strong { font-size: clamp(36px, 8vw, 84px); letter-spacing: -.08em; }
+    .a .vote { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid #18211f33; }
+    .a select { width: 100%; padding: 11px; border: 1px solid #18211f; border-radius: 7px; background: #fffdf6; }
+    .a .button { background: #ef7657; color: #18211f; }
+    .a .button.secondary { background: transparent; }
+    .a .side { padding: 20px; border-top: 7px solid #ef7657; background: #d9e8a2; }
+    .a .side .player-row:last-child { border-bottom: 0; }
+
+    /* B: live radio console */
+    .b { background: #101313; color: #edf4e8; }
+    .b .console { display: grid; grid-template-columns: 1fr 360px; gap: 2px; max-width: 1180px; margin: auto; background: #2a312c; border: 1px solid #3e4940; }
+    .b .left, .b .right { padding: clamp(20px, 4vw, 48px); background: #151918; }
+    .b .topline { display: flex; justify-content: space-between; color: #a8f36d; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; }
+    .b h1 { color: #a8f36d; }
+    .b .wave { display: flex; gap: 5px; align-items: center; height: 130px; margin: 26px 0; padding: 0 18px; background: #0e110f; border: 1px solid #364239; }
+    .b .wave i { flex: 1; max-width: 10px; background: #a8f36d; border-radius: 5px; opacity: .75; }
+    .b .wave i:nth-child(3n) { height: 72%; } .b .wave i:nth-child(3n+1) { height: 30%; } .b .wave i:nth-child(3n+2) { height: 52%; }
+    .b .now { padding: 18px; border: 1px solid #3e4940; background: #1b211d; }
+    .b .now strong { display: block; font-size: clamp(24px, 4vw, 44px); letter-spacing: -.04em; }
+    .b .button { background: #a8f36d; color: #101313; border-radius: 5px; }
+    .b .button.secondary { color: #edf4e8; }
+    .b .right { background: #0f1211; }
+    .b .right h2 { color: #a8f36d; font-size: 30px; }
+    .b .vote { display: grid; gap: 7px; padding: 14px 0; border-bottom: 1px solid #3e4940; }
+    .b select { padding: 12px; color: #edf4e8; background: #1a211c; border: 1px solid #4d5c4d; border-radius: 4px; }
+    .b .scoreline { display: flex; justify-content: space-between; padding: 9px 0; color: #c4d1c5; }
+
+    /* C: radio-dial / paper hybrid */
+    .c { background: #cbd7da; color: #102c38; }
+    .c .shell { display: grid; grid-template-columns: 210px 1fr; gap: 28px; max-width: 1080px; margin: auto; }
+    .c .rail { padding: 20px 0; border-right: 1px solid #102c3855; }
+    .c .rail h1 { font-size: 46px; }
+    .c .rail .station { margin-top: 50px; padding: 12px; border: 1px solid #102c38; border-radius: 50%; aspect-ratio: 1; display: grid; place-items: center; text-align: center; font-size: 12px; text-transform: uppercase; letter-spacing: .12em; }
+    .c .body { padding: 20px 0; }
+    .c .tuning { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding-bottom: 18px; border-bottom: 1px solid #102c3855; }
+    .c .dial { width: 54px; height: 54px; border: 1px solid #102c38; border-radius: 50%; display: grid; place-items: center; font-weight: 800; }
+    .c .broadcast { display: grid; grid-template-columns: 1fr .8fr; gap: 24px; margin-top: 24px; }
+    .c .paper { padding: 24px; background: #eaf0ec; border: 1px solid #102c38; box-shadow: 0 14px 0 #91afb4; }
+    .c .cover { display: grid; place-items: center; min-height: 220px; margin: 18px 0; background: #e6a75c; border: 1px solid #102c38; }
+    .c .cover span { font-size: 70px; font-weight: 900; letter-spacing: -.12em; }
+    .c .button { background: #e85d45; color: #fffaf0; border-radius: 6px; }
+    .c .button.secondary { color: #102c38; background: transparent; }
+    .c .votes { padding: 20px; border: 1px solid #102c38; background: #dbe6e0; }
+    .c select { padding: 10px; border: 1px solid #102c38; border-radius: 5px; background: #edf4ef; color: #102c38; }
+    .c .scoreline { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed #102c3866; }
+
+    .switcher { position: fixed; z-index: 30; right: 16px; bottom: 16px; left: 16px; display: flex; justify-content: center; gap: 8px; }
+    .switcher a { padding: 10px 14px; border: 1px solid #fff8; border-radius: 999px; background: #111d1fee; color: white; font-size: 12px; text-decoration: none; box-shadow: 0 8px 30px #0004; }
+    @media (max-width: 760px) { .a .mast, .c .tuning { align-items: start; flex-direction: column; } .a .main, .b .console, .c .shell, .c .broadcast { grid-template-columns: 1fr; } .c .rail { border-right: 0; border-bottom: 1px solid #102c3855; } .c .rail .station { display: none; } .b .right { padding-top: 28px; } }
+  </style>
+</head>
+<body>
+  <div class="prototype-note">KaarGaan · throwaway UI prototype</div>
+  <main id="app"></main>
+  <nav class="switcher" aria-label="Prototype variants">
+    <a href="?variant=a">A · Score sheet</a><a href="?variant=b">B · Radio console</a><a href="?variant=c">C · Broadcast desk</a>
+  </nav>
+  <script>
+    const qs = new URLSearchParams(location.search); const variant = (qs.get('variant') || 'a').toLowerCase();
+    const players = ['Asha', 'Biren', 'Chitra'];
+    const voteSelect = (name) => `<div class="vote"><label>${name}<select aria-label="${name} vote"><option>Choose a player</option>${players.filter(p => p !== name).map(p => `<option>${p}</option>`).join('')}</select></label></div>`;
+    const scores = `<div class="scoreline"><span>Asha</span><strong>20</strong></div><div class="scoreline"><span>Biren</span><strong>15</strong></div><div class="scoreline"><span>Chitra</span><strong>10</strong></div>`;
+    const actions = `<div class="stack" style="grid-template-columns:1fr 1fr;display:grid"><button class="button">Open voting</button><button class="button secondary">Skip song</button></div>`;
+    const a = `<div class="variant a"><div class="wrap"><header class="mast"><div><p class="eyebrow">Friday friends night · Monsoon night</p><h1>KaarGaan</h1><p class="muted">Listen together. Bluff confidently. Find the owner.</p></div><div class="round-tag">ROUND 04 / 09</div></header><div class="main"><section class="record"><p class="eyebrow">The song on trial</p><h2>Who brought this one?</h2><div class="cover"><strong>♪</strong></div><p class="muted">Playback stays on the shared phone. Discuss out loud, then record everyone’s guess.</p>${actions}</section><aside class="side"><h3>Public votes</h3><p class="muted">Every player votes, including the owner.</p>${players.map(voteSelect).join('')}<button class="button full" style="margin-top:18px">Reveal owner</button><div style="margin-top:28px"><h3>Scoreboard</h3>${scores}</div></aside></div></div></div>`;
+    const b = `<div class="variant b"><div class="console"><section class="left"><div class="topline"><span>Live session</span><span>04 / 09</span></div><h1>KaarGaan</h1><p class="muted">The room is listening. Keep the owner undercover.</p><div class="wave">${'<i></i>'.repeat(22)}</div><div class="now"><p class="eyebrow">Now playing · hidden owner</p><strong>Rain on the window</strong><span class="muted">YouTube playback · 00:42</span></div><div style="margin-top:18px">${actions}</div></section><aside class="right"><p class="eyebrow">Guess desk</p><h2>Lock your calls.</h2><p class="muted">Votes are visible and changeable until the host reveals.</p>${players.map(voteSelect).join('')}<button class="button full" style="margin-top:18px">Reveal owner</button><div style="margin-top:28px"><p class="eyebrow">Live points</p>${scores}</div></aside></div></div>`;
+    const c = `<div class="variant c"><div class="shell"><aside class="rail"><p class="eyebrow">Shared phone game</p><h1>KaarGaan</h1><p class="muted">কার গান?</p><div class="station">On air<br><strong>Round 04</strong></div></aside><section class="body"><header class="tuning"><div><p class="eyebrow">Monsoon night · Friday friends night</p><h2>Broadcast 04</h2></div><div class="dial">04</div></header><div class="broadcast"><section class="paper"><p class="eyebrow">The room hears</p><h2>Rain on the window</h2><div class="cover"><span>♪</span></div><p class="muted">Start the song on YouTube, let the room debate, then pass the phone for votes.</p>${actions}</section><aside class="votes"><h3>Vote ledger</h3><p class="muted">No names are revealed before the result.</p>${players.map(voteSelect).join('')}<button class="button full" style="margin-top:18px">Reveal owner</button><div style="margin-top:28px"><h3>Standing</h3>${scores}</div></aside></div></section></div></div>`;
+    document.getElementById('app').innerHTML = variant === 'b' ? b : variant === 'c' ? c : a;
+  </script>
+</body>
+</html>
