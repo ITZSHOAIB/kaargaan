@@ -29,16 +29,15 @@ test("tabletop screens and round controls fit phone and desktop", async ({ page 
     await page.getByRole("button", { name: "Confirm player submission" }).click();
     await page.getByRole("button", { name: "Start game", exact: true }).click();
     await page.getByRole("button", { name: "Open voting", exact: true }).click();
-    const selects = page.getByRole("combobox");
-    for (let i = 0; i < await selects.count(); i++) {
-      await selects.nth(i).click();
-      await page.getByRole("option").first().click();
+    const voteRows = page.locator("[data-voter-id]");
+    for (let i = 0; i < await voteRows.count(); i++) {
+      await voteRows.nth(i).locator("button.vote-option").first().click();
     }
     await page.screenshot({ path: `/tmp/kaargaan-voting-${width}.png`, fullPage: true });
     await page.getByRole("button", { name: "Reveal song owner" }).click();
-    await expect(page.getByRole("status")).toContainText("brought this song");
+    await expect(page.locator(".reveal")).toContainText("brought this song");
     await page.reload();
-    await expect(page.getByRole("status")).toContainText("brought this song");
+    await expect(page.locator(".reveal")).toContainText("brought this song");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.evaluate(() => localStorage.clear());
   }

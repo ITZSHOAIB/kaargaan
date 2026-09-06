@@ -69,6 +69,12 @@ main { padding:32px 0 48px; }
 .select-item { display:flex; align-items:center; min-height:42px; padding:9px 11px; border-radius:5px; color:var(--ink); font-size:15px; outline:none; cursor:pointer; }
 .select-item[data-highlighted] { background:var(--lime); }
 .select-item[data-disabled] { opacity:.5; pointer-events:none; }
+.vote-row { min-width:0; border:0; border-top:1px solid #a6ad99; padding:14px 0 0; }
+.vote-options { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.vote-option { min-height:46px; padding:10px 9px; border:1px solid #707a69; border-radius:7px; background:var(--sheet); color:var(--ink); font-size:14px; font-weight:700; line-height:1.2; overflow-wrap:anywhere; transition:background .12s ease, box-shadow .12s ease, transform .12s ease; }
+.vote-option:hover:not(:disabled) { background:#f1efdf; transform:translateY(-1px); }
+.vote-option.selected { background:var(--lime); border-color:var(--ink); box-shadow:2px 2px 0 var(--ink); }
+.vote-option[aria-pressed="true"] { font-weight:800; }
 .action { min-height:46px; border:1px solid var(--ink); border-radius:7px; font-weight:700; }
 .playback { padding:12px; background:var(--blue); border:1px solid var(--ink); border-radius:4px; }
 .playback iframe { border:0; }

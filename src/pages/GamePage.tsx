@@ -727,7 +727,8 @@ function Playing({ game, setGame }: { game: Game; setGame: (game: Game | null) =
   }
 
   const owner = game.players.find((player) => player.id === submission.ownerId);
-  const allVoted = game.players.every((player) => round.votes[player.id]);
+  const voteCount = game.players.filter((player) => round.votes[player.id]).length;
+  const allVoted = voteCount === game.players.length;
 
   return (
     <section className="grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
@@ -793,32 +794,40 @@ function Playing({ game, setGame }: { game: Game; setGame: (game: Game | null) =
       <aside className="sheet ledger">
         <h3 className="text-base font-semibold text-[#18211f]">Votes</h3>
         <p className="mt-2 text-sm text-[#536056]">
-          The owner must bluff too. Votes stay editable until reveal.
+          Everyone votes now. Change your choice anytime before reveal.
         </p>
-        <p className="mt-2 text-xs uppercase tracking-normal text-[#536056]">
-          First voter: {orderedVoters[0]?.name ?? "N/A"}
+        <p className="mt-2 text-xs uppercase tracking-normal text-[#536056]" role="status">
+          {voteCount} of {game.players.length} votes recorded
         </p>
         <div className="mt-5 space-y-3">
           {orderedVoters.map((voter) => (
-            <label key={voter.id} className="block">
-              <span className="text-xs uppercase tracking-normal text-[#536056]">{voter.name}</span>
-              <div className="mt-2">
-                <Select
-                  value={round.votes[voter.id] ?? ""}
-                  onValueChange={(value) => {
-                    try {
-                      commit(recordVote(game, voter.id, value), "Vote recorded.");
-                    } catch (caught) {
-                      setMessage(caught instanceof Error ? caught.message : "Vote rejected.");
-                    }
-                  }}
-                  disabled={round.phase !== "voting"}
-                  options={game.players.filter((player) => player.id !== voter.id).map((player) => ({ value: player.id, label: player.name }))}
-                  placeholder="Choose a player"
-                  aria-label={`Guess for ${voter.name}`}
-                />
+            <fieldset key={voter.id} className="vote-row" data-voter-id={voter.id}>
+              <legend className="text-xs uppercase tracking-normal text-[#536056]">{voter.name}'s guess</legend>
+              <div className="vote-options mt-2">
+                {game.players.filter((player) => player.id !== voter.id).map((candidate) => {
+                  const selected = round.votes[voter.id] === candidate.id;
+                  return (
+                    <button
+                      key={candidate.id}
+                      type="button"
+                      className={`vote-option${selected ? " selected" : ""}`}
+                      aria-label={`${voter.name} votes for ${candidate.name}`}
+                      aria-pressed={selected}
+                      disabled={round.phase !== "voting"}
+                      onClick={() => {
+                        try {
+                          commit(recordVote(game, voter.id, candidate.id), "Vote recorded.");
+                        } catch (caught) {
+                          setMessage(caught instanceof Error ? caught.message : "Vote rejected.");
+                        }
+                      }}
+                    >
+                      {candidate.name}
+                    </button>
+                  );
+                })}
               </div>
-            </label>
+            </fieldset>
           ))}
         </div>
         {round.phase === "voting" ? (
