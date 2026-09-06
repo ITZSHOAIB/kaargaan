@@ -32,6 +32,8 @@ test("tabletop screens and round controls fit phone and desktop", async ({ page 
     await page.getByRole("button", { name: "Import entry" }).click();
     await page.getByRole("button", { name: "Confirm player submission" }).click();
     await page.getByRole("button", { name: "Start game", exact: true }).click();
+    await expect(page.locator(".stage-sheet .phase-chip")).toHaveText("Listen first");
+    await expect(page.getByRole("button", { name: "Reveal song owner" })).not.toBeVisible();
     await page.getByRole("button", { name: "Open voting", exact: true }).click();
     const voteRows = page.locator("[data-voter-id]");
     for (let i = 0; i < await voteRows.count(); i++) {

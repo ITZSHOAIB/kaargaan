@@ -768,39 +768,47 @@ function Playing({ game, setGame }: { game: Game; setGame: (game: Game | null) =
   const owner = game.players.find((player) => player.id === submission.ownerId);
   const voteCount = game.players.filter((player) => round.votes[player.id]).length;
   const allVoted = voteCount === game.players.length;
+  const phaseLabel = round.phase === "listening" ? "Listen first" : round.phase === "voting" ? "Voting open" : round.phase === "revealed" ? "Owner revealed" : "Round skipped";
 
   return (
-    <section className="grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
-      <div className="sheet">
+    <section className="game-shell grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
+      <div className="sheet stage-sheet">
         {persistenceError ? <p className="mb-4 rounded-md border border-rose-300/20 bg-rose-300/10 px-4 py-3 text-sm text-[#922c22]">{persistenceError}</p> : null}
-        <p className="round-marker">
-          Round {game.activeRoundIndex + 1} of {game.rounds.length}
-        </p>
-        {game.roomId ? <RoomBadge roomId={game.roomId} /> : null}
-        <h2 className="mt-2 text-3xl font-semibold text-[#18211f]">Whose song is playing?</h2>
-        <div className="playback mt-5 aspect-video">
-          <iframe
-            title="Current song"
-            className="h-full w-full"
-            src={`https://www.youtube.com/embed/${submission.videoId}`}
-            allow="autoplay; encrypted-media"
-          />
+        <div className="stage-topline">
+          <p className="round-marker">Round {game.activeRoundIndex + 1} <span>of {game.rounds.length}</span></p>
+          {game.roomId ? <RoomBadge roomId={game.roomId} /> : null}
         </div>
-        <p role="status" className={round.phase === "revealed" ? "reveal" : "mt-4 text-sm"}>
-          {round.phase === "revealed"
-            ? `${owner?.name} brought this song!`
-            : round.phase === "skipped"
-              ? "Skipped. No points this round."
-              : message}
-        </p>
-        <div className="mt-5 flex flex-wrap gap-3">
+        <p className="stage-kicker">The mystery track</p>
+        <h2 className="stage-title">Whose song is playing?</h2>
+        <div className="stage-frame mt-5">
+          <div className="stage-frame-bar"><span>Now playing</span><span>Track {game.activeRoundIndex + 1}</span></div>
+          <div className="playback aspect-video">
+            <iframe
+              title="Current song"
+              className="h-full w-full"
+              src={`https://www.youtube.com/embed/${submission.videoId}`}
+              allow="autoplay; encrypted-media"
+            />
+          </div>
+        </div>
+        <div className="stage-status-row">
+          <span className={`phase-chip phase-${round.phase}`}>{phaseLabel}</span>
+          <p role="status" className={round.phase === "revealed" ? "reveal" : ""}>
+            {round.phase === "revealed"
+              ? `${owner?.name} brought this song!`
+              : round.phase === "skipped"
+                ? "Skipped. No points this round."
+                : message}
+          </p>
+        </div>
+        <div className="stage-actions">
           {round.phase === "listening" ? (
             <>
               <a
                 href={`https://www.youtube.com/watch?v=${submission.videoId}`}
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-md bg-[#ef7657] action px-4 py-2 text-sm font-semibold text-[#18211f]"
+                className="button primary"
               >
                 Open playback
               </a>
@@ -813,7 +821,7 @@ function Playing({ game, setGame }: { game: Game; setGame: (game: Game | null) =
                     setMessage(caught instanceof Error ? caught.message : "Unable to open voting.");
                   }
                 }}
-                className="rounded-md border border-[#7b846f] bg-[#faf8f0] px-4 py-2 text-sm text-[#18211f]"
+                className="button"
               >
                 Open voting
               </button>
@@ -823,7 +831,7 @@ function Playing({ game, setGame }: { game: Game; setGame: (game: Game | null) =
             <button
               type="button"
               onClick={() => commit(skip(game), "Round skipped.")}
-              className="rounded-md border border-rose-300/20 bg-rose-300/10 px-4 py-2 text-sm text-[#922c22]"
+              className="button danger-button"
             >
               Skip round
             </button>
@@ -831,15 +839,22 @@ function Playing({ game, setGame }: { game: Game; setGame: (game: Game | null) =
         </div>
       </div>
 
-      <aside className="sheet ledger">
-        <h3 className="text-base font-semibold text-[#18211f]">Votes</h3>
-        <p className="mt-2 text-sm text-[#536056]">
-          Everyone votes now. Change your choice anytime before reveal.
-        </p>
-        <p className="mt-2 text-xs uppercase tracking-normal text-[#536056]" role="status">
-          {voteCount} of {game.players.length} votes recorded
-        </p>
-        <div className="mt-5 space-y-3">
+      <aside className="sheet ledger vote-sheet">
+        <div className="vote-heading">
+          <p className="stage-kicker">Room call</p>
+          <h3>Who picked it?</h3>
+          <p>Make your guess, then change it freely until the reveal.</p>
+        </div>
+        <div className="vote-meter" aria-label={`${voteCount} of ${game.players.length} votes recorded`}>
+          <strong>{voteCount}<span>/{game.players.length}</span></strong>
+          <div><span>Votes recorded</span><div className="vote-dots">{game.players.map((player) => <i key={player.id} className={round.votes[player.id] ? "filled" : ""} />)}</div></div>
+        </div>
+        {round.phase === "listening" ? <div className="vote-waiting">
+          <span className="phase-chip phase-listening">Listen first</span>
+          <strong>Let the room hear the track.</strong>
+          <p>Open voting when everyone is ready to make a call.</p>
+        </div> : null}
+        {round.phase === "voting" ? <div className="vote-board">
           {orderedVoters.map((voter) => (
             <fieldset key={voter.id} className="vote-row" data-voter-id={voter.id}>
               <legend className="text-xs uppercase tracking-normal text-[#536056]">{voter.name}'s guess</legend>
@@ -869,7 +884,7 @@ function Playing({ game, setGame }: { game: Game; setGame: (game: Game | null) =
               </div>
             </fieldset>
           ))}
-        </div>
+        </div> : null}
         {round.phase === "voting" ? (
           <button
             type="button"
@@ -895,18 +910,15 @@ function Playing({ game, setGame }: { game: Game; setGame: (game: Game | null) =
             {game.activeRoundIndex + 1 === game.rounds.length ? "Show standings" : "Next round"}
           </button>
         ) : null}
-        <div className="mt-6 border-t border-[#7b846f] pt-5">
-          <h3 className="text-sm font-semibold text-[#18211f]">Live scores</h3>
+        <details className="score-details mt-6 border-t border-[#7b846f] pt-5">
+          <summary>Live scores</summary>
           <div className="mt-3 space-y-2">
-            {scores.map((player) => (
-              <div key={player.id} className="flex justify-between text-sm">
-                <span className="text-[#18211f]">{player.name}</span>
-                <span className="text-[#18211f]">{player.score}</span>
-              </div>
-            ))}
+            {scores.map((player) => <div key={player.id} className="flex justify-between text-sm"><span className="text-[#18211f]">{player.name}</span><span className="text-[#18211f]">{player.score}</span></div>)}
           </div>
-        </div>
-        <div className="mt-6 border-t border-[#7b846f] pt-5">
+        </details>
+        <details className="score-details mt-5 border-t border-[#7b846f] pt-5">
+          <summary>Game controls</summary>
+          <div className="mt-3">
           {confirmEnd ? (
             <div className="space-y-3">
               <p className="text-sm text-[#922c22]">End this game and discard its current progress?</p>
@@ -918,7 +930,8 @@ function Playing({ game, setGame }: { game: Game; setGame: (game: Game | null) =
           ) : (
             <button type="button" onClick={() => setConfirmEnd(true)} className="rounded-md border border-[#7b846f] bg-[#faf8f0] px-3 py-2 text-sm text-[#536056]">End game</button>
           )}
-        </div>
+          </div>
+        </details>
       </aside>
     </section>
   );
