@@ -1,7 +1,11 @@
 import { ArrowUpRight, Disc3, Users, UserRound } from "lucide-react";
 import { Link } from "react-router-dom";
+import { loadCurrentGameState } from "../lib/gamePersistence";
 
 export function HomePage() {
+  const savedGame = loadCurrentGameState().game;
+  const hasActiveGame = savedGame?.status === "playing";
+
   return <div className="home-layout">
     <section className="invitation">
       <h2>Your songs.<br/>Their guesses.<br/><em>Keep a straight face.</em></h2>
@@ -19,6 +23,15 @@ export function HomePage() {
         </Link>
       </div>
       <p className="small-note">One shared game phone · 3–10 players · YouTube links</p>
+      {hasActiveGame ? (
+        <div className="resume-banner" role="status">
+          <div>
+            <strong>Game in progress</strong>
+            <span>{savedGame.theme} · Round {savedGame.activeRoundIndex + 1} of {savedGame.rounds.length}</span>
+          </div>
+          <Link className="button" to="/host">Resume game</Link>
+        </div>
+      ) : null}
     </section>
     <aside className="rule-sheet">
       <Disc3 className="record-mark" size={100} strokeWidth={1} aria-hidden="true"/>
