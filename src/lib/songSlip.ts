@@ -2,6 +2,7 @@ import type { RoomInvite, SongSlip } from "./types";
 import { normalizeYouTubeLink } from "./youtube";
 
 const SLIP_MAX_BYTES = 2048;
+export const ENCRYPTED_SLIP_PREFIX = "kaargaan-encrypted-slip:v1:";
 
 export function createSongSlip(input: {
   playerName: string;
@@ -67,6 +68,40 @@ export function createSongSlip(input: {
 
 export function encodeSongSlip(slip: SongSlip): string {
   return encodeText(JSON.stringify(slip));
+}
+
+/** Encrypt a slip for a room-key text handoff, such as Discord. */
+export async function encodeEncryptedSongSlip(slip: SongSlip, roomSecret: string): Promise<string> {
+  const key = await deriveRoomKey(roomSecret);
+  const iv = globalThis.crypto.getRandomValues(new Uint8Array(12));
+  const plaintext = new TextEncoder().encode(JSON.stringify(slip));
+  const ciphertext = new Uint8Array(await globalThis.crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, plaintext));
+  const combined = new Uint8Array(iv.length + ciphertext.length);
+  combined.set(iv);
+  combined.set(ciphertext, iv.length);
+  return `${ENCRYPTED_SLIP_PREFIX}${encodeBytes(combined)}`;
+}
+
+export async function decodeEncryptedSongSlip(payload: string, roomSecret: string): Promise<{ ok: true; slip: SongSlip } | { ok: false; error: string }> {
+  if (!payload.startsWith(ENCRYPTED_SLIP_PREFIX)) {
+    return { ok: false, error: "This is not an encrypted KaarGaan song slip." };
+  }
+
+  try {
+    const combined = decodeBytes(payload.slice(ENCRYPTED_SLIP_PREFIX.length));
+    if (combined.length <= 12) {
+      return { ok: false, error: "The encrypted song slip is incomplete." };
+    }
+    const key = await deriveRoomKey(roomSecret);
+    const plaintext = await globalThis.crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: combined.slice(0, 12) },
+      key,
+      combined.slice(12)
+    );
+    return decodeSongSlip(new TextDecoder().decode(plaintext));
+  } catch {
+    return { ok: false, error: "Could not decrypt this song slip for the current room." };
+  }
 }
 
 export function decodeSongSlip(payload: string): { ok: true; slip: SongSlip } | { ok: false; error: string } {
@@ -154,20 +189,57 @@ export function importSongSlip(
     return decoded;
   }
 
-  if (decoded.slip.videoIds.length !== expectedSongCount) {
-    const actualLabel = decoded.slip.videoIds.length === 1 ? "song" : "songs";
+  return importDecodedSlip(decoded.slip, expectedSongCount);
+}
+
+export async function importEncryptedSongSlip(
+  payload: string,
+  roomSecret: string,
+  expectedSongCount: number
+): Promise<{ ok: true; links: string[]; playerName: string; roomId?: string; roomToken?: string } | { ok: false; error: string }> {
+  const decoded = await decodeEncryptedSongSlip(payload, roomSecret);
+  if (!decoded.ok) {
+    return decoded;
+  }
+
+  return importDecodedSlip(decoded.slip, expectedSongCount);
+}
+
+function importDecodedSlip(
+  slip: SongSlip,
+  expectedSongCount: number
+): { ok: true; links: string[]; playerName: string; roomId?: string; roomToken?: string } | { ok: false; error: string } {
+
+  if (slip.videoIds.length !== expectedSongCount) {
+    const actualLabel = slip.videoIds.length === 1 ? "song" : "songs";
     const expectedLabel = expectedSongCount === 1 ? "song" : "songs";
     return {
       ok: false,
-      error: `This slip contains ${decoded.slip.videoIds.length} ${actualLabel}, but the room needs ${expectedSongCount} ${expectedLabel}.`
+      error: `This slip contains ${slip.videoIds.length} ${actualLabel}, but the room needs ${expectedSongCount} ${expectedLabel}.`
     };
   }
 
   return {
     ok: true,
-    links: decoded.slip.videoIds.map((videoId) => `https://www.youtube.com/watch?v=${videoId}`),
-    playerName: decoded.slip.playerName,
-    ...(decoded.slip.roomId ? { roomId: decoded.slip.roomId } : {}),
-    ...(decoded.slip.roomToken ? { roomToken: decoded.slip.roomToken } : {})
+    links: slip.videoIds.map((videoId) => `https://www.youtube.com/watch?v=${videoId}`),
+    playerName: slip.playerName,
+    ...(slip.roomId ? { roomId: slip.roomId } : {}),
+    ...(slip.roomToken ? { roomToken: slip.roomToken } : {})
   };
+}
+
+async function deriveRoomKey(roomSecret: string): Promise<CryptoKey> {
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", new TextEncoder().encode(roomSecret));
+  return globalThis.crypto.subtle.importKey("raw", digest, "AES-GCM", false, ["encrypt", "decrypt"]);
+}
+
+function encodeBytes(bytes: Uint8Array): string {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+function decodeBytes(value: string): Uint8Array {
+  const binary = atob(value);
+  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
 }

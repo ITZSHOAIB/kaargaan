@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createRoomInvite, createSongSlip, decodeRoomInvite, decodeSongSlip, encodeRoomInvite, encodeSongSlip, importSongSlip } from "../../src/lib/songSlip";
+import { createRoomInvite, createSongSlip, decodeEncryptedSongSlip, decodeRoomInvite, decodeSongSlip, encodeEncryptedSongSlip, encodeRoomInvite, encodeSongSlip, importEncryptedSongSlip, importSongSlip } from "../../src/lib/songSlip";
 
 describe("song slip", () => {
   it("creates a compact slip from valid links", () => {
@@ -59,6 +59,31 @@ describe("song slip", () => {
 
     const invite = createRoomInvite({ roomId: "room-1", roomToken: "token-1", theme: "Monsoon", songsPerPlayer: 1, playerCount: 4 });
     expect(decodeRoomInvite(encodeRoomInvite(invite))).toEqual({ ok: true, invite });
+  });
+
+  it("round-trips an encrypted entry with the room secret", async () => {
+    const slip = createSongSlip({
+      playerName: "Asha",
+      theme: "Monsoon",
+      links: ["https://www.youtube.com/watch?v=dQw4w9WgXcQ"],
+      roomId: "room-1",
+      roomToken: "token-1",
+      songsPerPlayer: 1
+    });
+    expect(slip.ok).toBe(true);
+    if (!slip.ok) return;
+
+    const payload = await encodeEncryptedSongSlip(slip.slip, "room-1:token-1");
+    expect(payload).toMatch(/^kaargaan-encrypted-slip:v1:/);
+    expect(await decodeEncryptedSongSlip(payload, "room-1:token-1")).toEqual({ ok: true, slip: slip.slip });
+    expect((await decodeEncryptedSongSlip(payload, "room-1:wrong-token")).ok).toBe(false);
+    expect(await importEncryptedSongSlip(payload, "room-1:token-1", 1)).toEqual({
+      ok: true,
+      links: ["https://www.youtube.com/watch?v=dQw4w9WgXcQ"],
+      playerName: "Asha",
+      roomId: "room-1",
+      roomToken: "token-1"
+    });
   });
 
   it("imports slips only when the song count matches", () => {

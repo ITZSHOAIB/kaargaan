@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import QrScanner from "qr-scanner";
-import { AlertCircle, Check, Download, ScanLine, Video } from "lucide-react";
-import { createSongSlip, decodeRoomInvite, encodeSongSlip } from "../lib/songSlip";
+import { AlertCircle, Check, Copy, Download, ScanLine, Video } from "lucide-react";
+import { createSongSlip, decodeRoomInvite, encodeEncryptedSongSlip } from "../lib/songSlip";
 import { normalizeYouTubeLink } from "../lib/youtube";
 import type { RoomInvite } from "../lib/types";
 
@@ -105,6 +105,15 @@ export function PreparePage() {
     return true;
   }
 
+  async function copyGeneratedSlip() {
+    try {
+      await navigator.clipboard.writeText(generatedSlip);
+      setMessage("Encrypted entry copied. Paste it into Discord or send it to the host.");
+    } catch {
+      setMessage("Copy is unavailable here. Open the text below and copy it manually.");
+    }
+  }
+
   if (!invite) {
     return (
       <section className="mx-auto max-w-xl sheet player-join">
@@ -200,7 +209,7 @@ export function PreparePage() {
         <div className="mt-6 flex flex-wrap gap-3">
           <button
             type="button"
-            onClick={() => {
+            onClick={async () => {
               const result = createSongSlip({
                 playerName,
                 theme,
@@ -214,10 +223,15 @@ export function PreparePage() {
                 setGeneratedSlip("");
                 return;
               }
-              const encoded = encodeSongSlip(result.slip);
-              setGeneratedSlip(encoded);
-              setQrDataUrl("");
-              setMessage(`Created a ${result.slip.videoIds.length}-song slip for ${result.slip.playerName}.`);
+              try {
+                const encoded = await encodeEncryptedSongSlip(result.slip, `${invite.roomId}:${invite.roomToken}`);
+                setGeneratedSlip(encoded);
+                setQrDataUrl("");
+                setMessage(`Created an encrypted ${result.slip.videoIds.length}-song entry for ${result.slip.playerName}.`);
+              } catch (caught) {
+                setGeneratedSlip("");
+                setMessage(caught instanceof Error ? caught.message : "Unable to encrypt the song entry.");
+              }
             }}
             disabled={!canGenerate}
             className="inline-flex items-center gap-2 rounded-md bg-[#ef7657] action px-5 py-3 text-sm font-medium text-[#18211f] transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-45"
@@ -235,7 +249,7 @@ export function PreparePage() {
               {qrDataUrl ? (
                 <img
                   src={qrDataUrl}
-                  alt="Generated song slip QR code"
+                  alt="Generated encrypted song entry QR code"
                   className="h-56 w-56 rounded-md bg-white"
                 />
               ) : (
@@ -245,15 +259,17 @@ export function PreparePage() {
               )}
             </div>
             <div className="rounded-[1.5rem] border border-[#7b846f] bg-[#faf8f0] p-4">
-              <h3 className="text-base font-semibold text-[#18211f]">Show this QR to the host</h3>
+              <h3 className="text-base font-semibold text-[#18211f]">Show QR or share the encrypted entry</h3>
               <p className="mt-2 text-sm leading-6 text-[#18211f]">
-                Keep this screen open. The host scans this QR from the host phone when it is your turn.
+                In the room, the host scans this QR. On Discord, copy the encrypted entry and send it in the chat; the host pastes it into the import box.
               </p>
+              <button type="button" onClick={() => void copyGeneratedSlip()} className="mt-4 inline-flex items-center gap-2 rounded-md bg-[#c7d2ed] action px-4 py-2 text-sm font-semibold text-[#18211f]">
+                <Copy size={15} aria-hidden="true" />
+                Copy encrypted entry
+              </button>
               <details className="mt-4">
-                <summary className="cursor-pointer text-xs text-[#536056]">Need a paste fallback?</summary>
-                <pre className="mt-3 overflow-x-auto rounded-md bg-[#faf8f0] p-4 text-xs leading-6 text-[#18211f]">
-                  {generatedSlip}
-                </pre>
+                <summary className="cursor-pointer text-xs text-[#536056]">Show the encrypted text</summary>
+                <textarea readOnly value={generatedSlip} aria-label="Encrypted song entry" className="mt-3 min-h-28 w-full rounded-md border border-[#7b846f] bg-[#faf8f0] p-3 text-xs leading-5 text-[#18211f]" />
               </details>
             </div>
           </div>

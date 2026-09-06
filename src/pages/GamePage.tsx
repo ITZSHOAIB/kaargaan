@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import QrScanner from "qr-scanner";
+import { Copy } from "lucide-react";
 import {
   beginVoting,
   createGame,
@@ -13,7 +14,7 @@ import {
 } from "../lib/gameEngine";
 import { clearCurrentGame, currentGameKey, loadCurrentGameState, saveCurrentGame } from "../lib/gamePersistence";
 import QRCode from "qrcode";
-import { createRoomInvite, encodeRoomInvite, importSongSlip } from "../lib/songSlip";
+import { createRoomInvite, encodeRoomInvite, ENCRYPTED_SLIP_PREFIX, importEncryptedSongSlip, importSongSlip } from "../lib/songSlip";
 import { normalizeYouTubeLink } from "../lib/youtube";
 import type { Game, Player, Submission } from "../lib/types";
 import { Select } from "../components/ui/Select";
@@ -232,6 +233,24 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
 
   function applyImportedSlip(payload: string) {
     const result = importSongSlip(payload, songCount);
+    return applyImportedResult(result);
+  }
+
+  async function copyRoomInvite() {
+    try {
+      await navigator.clipboard.writeText(roomPayload);
+      setMessage("Room invite copied. Send it to remote players in Discord.");
+    } catch {
+      setMessage("Copy is unavailable here. Open the invite text below and copy it manually.");
+    }
+  }
+
+  async function applyEncryptedSlip(payload: string) {
+    const result = await importEncryptedSongSlip(payload, `${roomId}:${roomToken}`, songCount);
+    return applyImportedResult(result);
+  }
+
+  function applyImportedResult(result: ReturnType<typeof importSongSlip>) {
     if (!result.ok) {
       setImportError(result.error);
       return false;
@@ -322,6 +341,18 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
         </p>
         {roomQrDataUrl ? <img src={roomQrDataUrl} alt="Room invite QR code" className="mx-auto mt-6 h-64 w-64 rounded-md bg-white p-3" /> : <div className="mx-auto mt-6 flex h-64 w-64 items-center justify-center rounded-md bg-[#e2e9bb] text-sm text-[#536056]">Generating room QR…</div>}
         <p className="mt-5 text-center text-sm text-[#536056]">Players should scan this QR from the Player setup screen.</p>
+        <div className="mt-5 rounded-md border border-[#7b846f] bg-[#c7d2ed] p-4">
+          <p className="text-sm font-semibold text-[#18211f]">Playing through Discord?</p>
+          <p className="mt-1 text-sm leading-6 text-[#536056]">Copy the room invite and send it to remote players. They can paste it on the Player screen.</p>
+          <button type="button" onClick={() => void copyRoomInvite()} className="mt-3 inline-flex items-center gap-2 rounded-md bg-[#faf8f0] action px-4 py-2 text-sm font-semibold text-[#18211f]">
+            <Copy size={15} aria-hidden="true" />
+            Copy room invite
+          </button>
+          <details className="mt-3">
+            <summary className="cursor-pointer text-xs text-[#536056]">Show invite text</summary>
+            <textarea readOnly value={roomPayload} aria-label="Room invite payload" className="mt-2 min-h-24 w-full rounded-md border border-[#7b846f] bg-[#faf8f0] p-3 text-xs leading-5 text-[#18211f]" />
+          </details>
+        </div>
         <button type="button" onClick={() => { setCurrentPlayerIndex(0); setScreen("private"); setMessage(`Add your own songs, ${hostName}.`); }} className="mt-6 rounded-md bg-[#ef7657] action px-5 py-3 text-sm font-semibold text-[#18211f]">Everyone has scanned — add my songs</button>
       </section>
     );
@@ -408,7 +439,7 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
           <p className="round-marker">Host · Step 2 of 3</p>
           <h2 className="mt-2 text-3xl font-semibold text-[#18211f]">Collect songs from {currentPlayer.name}</h2>
           <p className="mt-3 text-sm leading-7 text-[#18211f]">
-            Ask {currentPlayer.name} to prepare songs on their own phone. The host scans their QR below, or the player can enter links directly on this phone.
+            Ask {currentPlayer.name} to prepare songs on their own phone. Scan their QR in the room, or paste their encrypted entry if they are joining through Discord.
           </p>
           <div className="mt-6 grid gap-4 sm:grid-cols-[1fr_auto]">
             <Field label="Theme" value={theme} onChange={setTheme} disabled />
@@ -480,10 +511,10 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
           <h3 className="text-base font-semibold text-[#18211f]">Handoff order</h3>
           <p className="mt-2 text-sm text-[#536056]">Each player sees only their own songs. The rest stay hidden.</p>
           {!isHostSlot ? <details className="mt-5 rounded-md border border-[#7b846f] bg-[#faf8f0] p-4" open>
-            <summary className="cursor-pointer text-sm font-semibold text-[#18211f]">Host: scan the player&apos;s QR</summary>
-            <div className="pt-3">
-              <p className="text-sm text-[#536056]">
-                Keep this host phone here. The player holds their QR on their own phone; scan it with this camera.
+                <summary className="cursor-pointer text-sm font-semibold text-[#18211f]">Receive this player&apos;s entry</summary>
+                <div className="pt-3">
+                  <p className="text-sm text-[#536056]">
+                In the room, scan the QR from the player&apos;s phone. For Discord, paste the encrypted entry they shared below.
               </p>
             <video
               ref={importVideoRef}
@@ -510,18 +541,22 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
             <textarea
               value={importPayload}
               onChange={(event) => setImportPayload(event.target.value)}
-              placeholder="Paste a KaarGaan song slip JSON payload"
+              placeholder="Paste the encrypted entry from Discord"
               className="mt-3 min-h-28 w-full rounded-md border border-[#7b846f] bg-[#faf8f0] p-3 text-sm text-[#18211f] outline-none"
             />
             <div className="mt-3 flex flex-wrap gap-3">
               <button
                 type="button"
                 onClick={() => {
-                  applyImportedSlip(importPayload);
+                  if (importPayload.startsWith(ENCRYPTED_SLIP_PREFIX)) {
+                    void applyEncryptedSlip(importPayload);
+                  } else {
+                    applyImportedSlip(importPayload);
+                  }
                 }}
                 className="rounded-md bg-[#ef7657] action px-4 py-2 text-sm font-semibold text-[#18211f]"
               >
-                Import slip
+                Import entry
               </button>
             </div>
               <p className="mt-3 text-xs uppercase tracking-normal text-[#536056]">Status: {importState}</p>
@@ -626,15 +661,16 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
     importScannerRef.current?.destroy();
 
     try {
-      const scanner = new QrScanner(
+        const scanner = new QrScanner(
         importVideoRef.current,
         (result) => {
-          if (applyImportedSlip(result.data)) {
+          const imported = result.data.startsWith(ENCRYPTED_SLIP_PREFIX)
+            ? applyEncryptedSlip(result.data)
+            : Promise.resolve(applyImportedSlip(result.data));
+          void imported.then((accepted) => {
             setImportState("idle");
-            stopImportScanner();
-          } else {
-            setImportState("idle");
-          }
+            if (accepted) stopImportScanner();
+          });
         },
         {
           highlightScanRegion: true,
