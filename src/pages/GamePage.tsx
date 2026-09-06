@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import QrScanner from "qr-scanner";
 import {
   beginVoting,
   createGame,
@@ -11,8 +12,12 @@ import {
   voteOrder
 } from "../lib/gameEngine";
 import { clearCurrentGame, currentGameKey, loadCurrentGameState, saveCurrentGame } from "../lib/gamePersistence";
+import { importSongSlip } from "../lib/songSlip";
 import { normalizeYouTubeLink } from "../lib/youtube";
 import type { Game, Player, Submission } from "../lib/types";
+
+const qrScannerWorkerPath = new URL("qr-scanner/qr-scanner-worker.min.js", import.meta.url).toString();
+QrScanner.WORKER_PATH = qrScannerWorkerPath;
 
 type SetupPlayer = { id: string; name: string; links: string[] };
 type SetupScreen = "roster" | "private" | "handoff" | "ready";
@@ -76,6 +81,12 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
   const [pendingNextPlayerIndex, setPendingNextPlayerIndex] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("Set the roster, then hand the phone around one player at a time.");
+  const [importPayload, setImportPayload] = useState("");
+  const [importMessage, setImportMessage] = useState("Scan or paste a slip to fill the current player's songs.");
+  const [importError, setImportError] = useState("");
+  const [importState, setImportState] = useState<"idle" | "scanning" | "blocked">("idle");
+  const importVideoRef = useRef<HTMLVideoElement | null>(null);
+  const importScannerRef = useRef<QrScanner | null>(null);
 
   function updateSongCount(nextCount: number) {
     setSongCount(nextCount);
@@ -216,6 +227,23 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
     return submissions;
   }
 
+  function applyImportedSlip(payload: string) {
+    const result = importSongSlip(payload, songCount);
+    if (!result.ok) {
+      setImportError(result.error);
+      return false;
+    }
+
+    setPlayers((current) =>
+      current.map((player, index) => (index === currentPlayerIndex ? { ...player, links: result.links } : player))
+    );
+    setImportPayload(payload);
+    setImportError("");
+    setImportMessage(`Imported ${result.links.length} songs for ${players[currentPlayerIndex].name}.`);
+    setMessage(`Imported ${result.links.length} songs for ${players[currentPlayerIndex].name}.`);
+    return true;
+  }
+
   function startGame() {
     const rosterError = validateRoster();
     if (rosterError) {
@@ -240,6 +268,13 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
 
   const currentPlayer = players[currentPlayerIndex];
   const nextPlayer = pendingNextPlayerIndex !== null ? players[pendingNextPlayerIndex] : null;
+
+  useEffect(() => {
+    return () => {
+      importScannerRef.current?.destroy();
+      importScannerRef.current = null;
+    };
+  }, []);
 
   if (screen === "handoff" && nextPlayer) {
     return (
@@ -375,6 +410,56 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
         <aside className="sheet ledger">
           <h3 className="text-base font-semibold text-[#18211f]">Handoff order</h3>
           <p className="mt-2 text-sm text-[#536056]">Each player sees only their own songs. The rest stay hidden.</p>
+          <details className="mt-5 rounded-md border border-[#7b846f] bg-[#faf8f0] p-4">
+            <summary className="cursor-pointer text-sm font-semibold text-[#18211f]">Have a prepared slip? Import it</summary>
+            <div className="pt-3">
+              <p className="text-sm text-[#536056]">
+                Scan the QR from the prep phone or paste the slip payload here. Imported songs replace this player&apos;s links.
+              </p>
+            <video
+              ref={importVideoRef}
+              className="mt-3 aspect-video w-full rounded-md border border-[#7b846f] bg-black"
+              muted
+              playsInline
+            />
+            <div className="mt-3 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => void startImportScanner()}
+                className="rounded-md bg-[#c7d2ed] action px-4 py-2 text-sm font-medium text-[#18211f]"
+              >
+                Start camera scan
+              </button>
+              <button
+                type="button"
+                onClick={() => stopImportScanner()}
+                className="rounded-md border border-[#7b846f] bg-[#faf8f0] px-4 py-2 text-sm text-[#18211f]"
+              >
+                Stop scan
+              </button>
+            </div>
+            <textarea
+              value={importPayload}
+              onChange={(event) => setImportPayload(event.target.value)}
+              placeholder="Paste a KaarGaan song slip JSON payload"
+              className="mt-3 min-h-28 w-full rounded-md border border-[#7b846f] bg-[#faf8f0] p-3 text-sm text-[#18211f] outline-none"
+            />
+            <div className="mt-3 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  applyImportedSlip(importPayload);
+                }}
+                className="rounded-md bg-[#ef7657] action px-4 py-2 text-sm font-semibold text-[#18211f]"
+              >
+                Import slip
+              </button>
+            </div>
+              <p className="mt-3 text-xs uppercase tracking-normal text-[#536056]">Status: {importState}</p>
+              <p className="mt-2 text-sm text-[#536056]">{importMessage}</p>
+              {importError ? <p className="mt-2 text-sm text-[#922c22]">{importError}</p> : null}
+            </div>
+          </details>
           <div className="mt-5 space-y-2">
             {players.map((player, index) => (
               <div
@@ -401,10 +486,10 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
 
   return (
     <section className="mx-auto max-w-4xl sheet">
-      <p className="round-marker">Set up the room</p>
-      <h2 className="mt-2 text-3xl font-semibold text-[#18211f]">Build the roster before the private handoff starts</h2>
+      <p className="round-marker">Host setup · 1 of 2</p>
+      <h2 className="mt-2 text-3xl font-semibold text-[#18211f]">Set up the room</h2>
       <p className="mt-3 text-sm leading-7 text-[#18211f]">
-        Choose a theme, set the song count, and name the players. The next screen will move through the room one phone handoff at a time.
+        Choose a theme, set the song count, and add everyone who is playing. Songs come next, one player at a time, on the shared phone.
       </p>
       <div className="mt-6 grid gap-4 sm:grid-cols-[1fr_auto]">
         <Field label="Theme" value={theme} onChange={setTheme} />
@@ -433,18 +518,7 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
               onChange={(event) => updatePlayer(index, { name: event.target.value })}
               className="w-full rounded-xl border border-[#7b846f] bg-[#faf8f0] px-3 py-2 text-sm text-[#18211f] outline-none"
             />
-            <div className="mt-3 grid gap-2">
-              {Array.from({ length: songCount }, (_, songIndex) => (
-                <input
-                  key={songIndex}
-                  aria-label={`${player.name} song ${songIndex + 1}`}
-                  value={player.links[songIndex] ?? ""}
-                  onChange={(event) => updateLink(index, songIndex, event.target.value)}
-                  placeholder={`Song ${songIndex + 1} YouTube link`}
-                  className="w-full rounded-xl border border-[#7b846f] bg-[#faf8f0] px-3 py-2 text-sm text-[#18211f] outline-none"
-                />
-              ))}
-            </div>
+            <p className="mt-2 text-xs text-[#536056]">Songs will be added privately after the roster is ready.</p>
           </div>
         ))}
       </div>
@@ -500,11 +574,53 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
         }}
         className="mt-6 rounded-md bg-[#ef7657] action px-5 py-3 text-sm font-semibold text-[#18211f]"
       >
-        Begin private handoff
+        Continue to player songs
       </button>
       <p className="mt-4 text-sm text-[#536056]">{message}</p>
     </section>
   );
+
+  async function startImportScanner() {
+    if (!importVideoRef.current) {
+      setImportError("Camera preview is not ready yet.");
+      return;
+    }
+
+    setImportError("");
+    setImportState("scanning");
+    importScannerRef.current?.destroy();
+
+    try {
+      const scanner = new QrScanner(
+        importVideoRef.current,
+        (result) => {
+          setImportPayload(result.data);
+          if (applyImportedSlip(result.data)) {
+            setImportState("idle");
+            stopImportScanner();
+          } else {
+            setImportState("idle");
+          }
+        },
+        {
+          highlightScanRegion: true,
+          preferredCamera: "environment"
+        }
+      );
+      importScannerRef.current = scanner;
+      await scanner.start();
+    } catch (caught) {
+      setImportState("blocked");
+      setImportError(caught instanceof Error ? caught.message : "Camera access is unavailable.");
+    }
+  }
+
+  function stopImportScanner() {
+    importScannerRef.current?.stop();
+    importScannerRef.current?.destroy();
+    importScannerRef.current = null;
+    setImportState("idle");
+  }
 }
 
 function Playing({ game, setGame }: { game: Game; setGame: (game: Game | null) => void }) {

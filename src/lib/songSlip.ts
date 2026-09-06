@@ -80,3 +80,27 @@ export function decodeSongSlip(payload: string): { ok: true; slip: SongSlip } | 
     return { ok: false, error: "Could not read that QR payload." };
   }
 }
+
+export function importSongSlip(
+  payload: string,
+  expectedSongCount: number
+): { ok: true; links: string[] } | { ok: false; error: string } {
+  const decoded = decodeSongSlip(payload);
+  if (!decoded.ok) {
+    return decoded;
+  }
+
+  if (decoded.slip.videoIds.length !== expectedSongCount) {
+    const actualLabel = decoded.slip.videoIds.length === 1 ? "song" : "songs";
+    const expectedLabel = expectedSongCount === 1 ? "song" : "songs";
+    return {
+      ok: false,
+      error: `This slip contains ${decoded.slip.videoIds.length} ${actualLabel}, but the room needs ${expectedSongCount} ${expectedLabel}.`
+    };
+  }
+
+  return {
+    ok: true,
+    links: decoded.slip.videoIds.map((videoId) => `https://www.youtube.com/watch?v=${videoId}`)
+  };
+}

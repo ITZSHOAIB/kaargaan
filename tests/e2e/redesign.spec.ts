@@ -6,9 +6,22 @@ test("tabletop screens and round controls fit phone and desktop", async ({ page 
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/");
     await page.screenshot({ path: `/tmp/kaargaan-home-${width}.png`, fullPage: true });
-    await page.getByRole("link", { name: "Gather the room" }).click();
-    await expect(page.getByRole("heading", { name: "Build the roster before the private handoff starts" })).toBeVisible();
-    await page.getByRole("button", { name: "Begin private handoff" }).click();
+    await page.getByRole("link", { name: "Host a game" }).click();
+    await expect(page.getByRole("heading", { name: "Set up the room" })).toBeVisible();
+    await page.getByRole("button", { name: "Continue to player songs" }).click();
+    await page.getByRole("textbox", { name: /Asha song 1/ }).fill("https://www.youtube.com/watch?v=abcdefghijk");
+    await page.getByRole("textbox", { name: /Asha song 2/ }).fill("https://www.youtube.com/watch?v=lmnopqrstuv");
+    await page.getByRole("textbox", { name: /Asha song 3/ }).fill("https://www.youtube.com/watch?v=12345678_-0");
+    await page.getByText("Have a prepared slip? Import it").click();
+    await page.getByRole("textbox", { name: "Paste a KaarGaan song slip JSON payload" }).fill(JSON.stringify({
+      format: "kaargaan-song-slip",
+      version: 1,
+      playerName: "Asha",
+      theme: "Monsoon night",
+      videoIds: ["abcdefghijk", "lmnopqrstuv", "12345678_-0"]
+    }));
+    await page.getByRole("button", { name: "Import slip" }).click();
+    await expect(page.getByRole("textbox", { name: /Asha song 1/ })).toHaveValue("https://www.youtube.com/watch?v=abcdefghijk");
     await page.getByRole("button", { name: "Save and pass" }).click();
     await page.getByRole("button", { name: "Continue" }).click();
     await page.getByRole("button", { name: "Save and pass" }).click();

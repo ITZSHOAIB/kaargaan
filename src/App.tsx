@@ -9,7 +9,7 @@ export default function App() {
     <header className="masthead">
       <div className="brand"><Disc3 size={30} aria-hidden="true" /><h1>KaarGaan<span lang="bn">কার গান?</span></h1></div>
       <nav aria-label="Main navigation">
-        {[{to:"/",label:"Home",icon:House},{to:"/prepare",label:"Prepare songs",icon:Music2},{to:"/game",label:"Game",icon:Play}].map(({to,label,icon:Icon}) =>
+        {[{to:"/",label:"Home",icon:House},{to:"/prepare",label:"Player prep",icon:Music2},{to:"/game",label:"Host game",icon:Play}].map(({to,label,icon:Icon}) =>
           <NavLink end key={to} to={to} className={({isActive})=>isActive?"nav-link active":"nav-link"}><Icon size={16} aria-hidden="true"/>{label}</NavLink>)}
       </nav>
     </header>

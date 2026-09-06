@@ -82,7 +82,7 @@ export function PreparePage() {
       <div className="sheet">
         <div className="flex items-start justify-between gap-4">
           <div>
-            
+            <p className="round-marker">Player setup</p>
             <h2 className="mt-2 text-3xl font-semibold tracking-tight text-[#18211f]">Create a local song slip</h2>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-[#18211f]">
               Keep this on the personal phone, then hand the game phone to the player for import.

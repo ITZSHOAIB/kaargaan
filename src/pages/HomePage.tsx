@@ -1,13 +1,24 @@
-import { ArrowUpRight, Disc3 } from "lucide-react";
+import { ArrowUpRight, Disc3, Users, UserRound } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export function HomePage() {
   return <div className="home-layout">
     <section className="invitation">
       <h2>Your songs.<br/>Their guesses.<br/><em>Keep a straight face.</em></h2>
-      <p>Someone in this room picked that song. Listen together, talk it out, and guess whose playlist it came from.</p>
-      <div className="actions"><Link className="button primary" to="/game">Gather the room <ArrowUpRight size={20}/></Link><Link className="button" to="/prepare">Prepare songs</Link></div>
-      <p className="small-note">One shared phone · 3–10 friends · YouTube links</p>
+      <p>One person hosts the room. Everyone else adds songs privately, then the room guesses who picked each track.</p>
+      <div className="role-choice" aria-label="Choose your role">
+        <Link className="role-option role-option-primary" to="/game">
+          <span className="role-icon"><Users size={21} aria-hidden="true" /></span>
+          <span><strong>Host a game</strong><small>Set the players, play songs, and record votes.</small></span>
+          <ArrowUpRight size={20} aria-hidden="true" />
+        </Link>
+        <Link className="role-option" to="/prepare">
+          <span className="role-icon"><UserRound size={21} aria-hidden="true" /></span>
+          <span><strong>Join as a player</strong><small>Prepare your songs on your own phone.</small></span>
+          <ArrowUpRight size={20} aria-hidden="true" />
+        </Link>
+      </div>
+      <p className="small-note">One shared game phone · 3–10 players · YouTube links</p>
     </section>
     <aside className="rule-sheet">
       <Disc3 className="record-mark" size={100} strokeWidth={1} aria-hidden="true"/>
