@@ -5,7 +5,7 @@ test("home, player, and host pages render", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "KaarGaan" })).toBeVisible();
 
   await page.getByRole("link", { name: "Join as a player" }).click();
-  await expect(page.getByRole("heading", { name: "Create a local song slip" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Prepare songs for the host" })).toBeVisible();
 
   await page.goto("/");
   await page.getByRole("link", { name: "Host a game" }).click();

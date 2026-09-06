@@ -282,10 +282,10 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
   if (screen === "handoff" && nextPlayer) {
     return (
       <section className="mx-auto max-w-3xl sheet">
-        <p className="round-marker">Private handoff</p>
-        <h2 className="mt-2 text-3xl font-semibold text-[#18211f]">Hand the phone to {nextPlayer.name}</h2>
+        <p className="round-marker">Host · Step 2 of 3</p>
+        <h2 className="mt-2 text-3xl font-semibold text-[#18211f]">Next: {nextPlayer.name}</h2>
         <p className="mt-3 text-sm leading-7 text-[#18211f]">
-          {message} The next player should fill only their own song links.
+          {message} Give the phone to {nextPlayer.name} only after the previous player has finished.
         </p>
         <div className="mt-6 rounded-md border border-[#7b846f] bg-[#e2e9bb] p-4">
           <p className="text-sm text-[#18211f]">The previous player&apos;s links are locked now.</p>
@@ -317,7 +317,7 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
 
     return (
       <section className="mx-auto max-w-3xl sheet">
-        <p className="round-marker">Setup complete</p>
+        <p className="round-marker">Host · Step 3 of 3</p>
         <h2 className="mt-2 text-3xl font-semibold text-[#18211f]">Start the game when everyone is ready</h2>
         <p className="mt-3 text-sm leading-7 text-[#18211f]">
           All song links are locked in. The shuffled round order will stay fixed after the game starts.
@@ -357,10 +357,10 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
     return (
       <section className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
         <div className="sheet">
-          <p className="round-marker">Private setup</p>
-          <h2 className="mt-2 text-3xl font-semibold text-[#18211f]">{currentPlayer.name}, add your songs</h2>
+          <p className="round-marker">Host · Step 2 of 3</p>
+          <h2 className="mt-2 text-3xl font-semibold text-[#18211f]">Collect songs from {currentPlayer.name}</h2>
           <p className="mt-3 text-sm leading-7 text-[#18211f]">
-            Only the player holding the phone should see these links. Fill them in, save, and pass the phone on.
+            Ask {currentPlayer.name} to prepare songs on their own phone. The host scans their QR below, or the player can enter links directly on this phone.
           </p>
           <div className="mt-6 grid gap-4 sm:grid-cols-[1fr_auto]">
             <Field label="Theme" value={theme} onChange={setTheme} disabled />
@@ -396,6 +396,8 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
             </div>
           ) : (
             <div className="mt-6 space-y-3">
+              <p className="text-sm font-semibold text-[#18211f]">Or enter links on the host phone</p>
+              <p className="text-sm text-[#536056]">Use this only when {currentPlayer.name} is entering songs directly here.</p>
               {Array.from({ length: songCount }, (_, songIndex) => (
                 <input
                   key={songIndex}
@@ -432,10 +434,10 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
           <h3 className="text-base font-semibold text-[#18211f]">Handoff order</h3>
           <p className="mt-2 text-sm text-[#536056]">Each player sees only their own songs. The rest stay hidden.</p>
           <details className="mt-5 rounded-md border border-[#7b846f] bg-[#faf8f0] p-4">
-            <summary className="cursor-pointer text-sm font-semibold text-[#18211f]">Have a prepared slip? Import it</summary>
+            <summary className="cursor-pointer text-sm font-semibold text-[#18211f]">Host: scan the player&apos;s QR</summary>
             <div className="pt-3">
               <p className="text-sm text-[#536056]">
-                Scan the QR from the prep phone or paste the slip payload here. Imported songs replace this player&apos;s links.
+                Keep this host phone here. The player holds their QR on their own phone; scan it with this camera.
               </p>
             <video
               ref={importVideoRef}
@@ -449,7 +451,7 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
                 onClick={() => void startImportScanner()}
                 className="rounded-md bg-[#c7d2ed] action px-4 py-2 text-sm font-medium text-[#18211f]"
               >
-                Start camera scan
+                Start camera scan on host phone
               </button>
               <button
                 type="button"

@@ -12,7 +12,7 @@ test("tabletop screens and round controls fit phone and desktop", async ({ page 
     await page.getByRole("textbox", { name: /Asha song 1/ }).fill("https://www.youtube.com/watch?v=abcdefghijk");
     await page.getByRole("textbox", { name: /Asha song 2/ }).fill("https://www.youtube.com/watch?v=lmnopqrstuv");
     await page.getByRole("textbox", { name: /Asha song 3/ }).fill("https://www.youtube.com/watch?v=12345678_-0");
-    await page.getByText("Have a prepared slip? Import it").click();
+    await page.getByText("Host: scan the player's QR").click();
     await page.getByRole("textbox", { name: "Paste a KaarGaan song slip JSON payload" }).fill(JSON.stringify({
       format: "kaargaan-song-slip",
       version: 1,
