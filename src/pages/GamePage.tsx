@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import QrScanner from "qr-scanner";
 import { qrScanRegion } from "../lib/qrScanRegion";
-import { ArrowRight, Check, Disc3, ScanLine, Trophy, Copy, Sparkles, Target, ShieldCheck } from "lucide-react";
+import { ArrowRight, Check, Disc3, ScanLine, Trophy, Copy, Sparkles, Target, ShieldCheck, Eye, EyeOff } from "lucide-react";
 import {
   beginVoting,
   createGame,
@@ -82,6 +82,7 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
   const [restored] = useState(loadHostDraft);
   const [lockedPlayerIds, setLockedPlayerIds] = useState<string[]>(restored?.lockedPlayerIds ?? []);
   const [showRoom, setShowRoom] = useState(false);
+  const [showSongLinks, setShowSongLinks] = useState(false);
   const saveError = useDraftStatus(HOST_DRAFT_KEY);
   const [importing, setImporting] = useState(false);
   const importRevision = useRef(0);
@@ -510,9 +511,10 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
         </div>
         <div className="sheet collection-panel">
           {isHostSlot ? <div className="collection-fields">
+            <div className="collection-fields-header"><div><strong>Your private picks</strong><span>{showSongLinks ? "Links are visible on this phone." : "Links are hidden while you hand over the phone."}</span></div><button type="button" className="song-visibility-toggle" onClick={() => setShowSongLinks(current => !current)} aria-pressed={showSongLinks}><span>{showSongLinks ? "Hide links" : "Show links"}</span>{showSongLinks ? <EyeOff size={17} aria-hidden="true" /> : <Eye size={17} aria-hidden="true" />}</button></div>
             {Array.from({ length: songCount }, (_, songIndex) => <label key={songIndex}>
               <span>Song {songIndex + 1}</span>
-              <input aria-label={`${currentPlayer.name} song ${songIndex + 1}`} value={currentPlayer.links[songIndex] ?? ""}
+              <input type={showSongLinks ? "url" : "password"} autoComplete="off" aria-label={`${currentPlayer.name} song ${songIndex + 1}${showSongLinks ? "" : " (hidden)"}`} value={currentPlayer.links[songIndex] ?? ""}
                 onChange={(event) => updateLink(currentPlayerIndex, songIndex, event.target.value)} placeholder="Paste a YouTube link" className="control" />
             </label>)}
             <button type="button" onClick={lockCurrentPlayer} className="button primary">Save my songs <ArrowRight size={18} aria-hidden="true" /></button>

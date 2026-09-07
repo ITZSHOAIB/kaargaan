@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import QrScanner from "qr-scanner";
 import { qrScanRegion } from "../lib/qrScanRegion";
-import { AlertCircle, Check, Copy, Download, ScanLine, Video } from "lucide-react";
+import { AlertCircle, Check, Copy, Download, Eye, EyeOff, ScanLine, Video } from "lucide-react";
 import { createSongSlip, decodeRoomInvite, encodeEncryptedSongSlip } from "../lib/songSlip";
 import { normalizeYouTubeLink } from "../lib/youtube";
 import { RoomSubheader } from "../components/RoomBadge";
@@ -18,6 +18,7 @@ export function PreparePage() {
   const [playerName, setPlayerName] = useState(restored?.playerName ?? "");
   const [theme, setTheme] = useState(restored?.invite.theme ?? "");
   const [links, setLinks] = useState<LinkRow[]>(restored?.links ?? []);
+  const [showSongLinks, setShowSongLinks] = useState(false);
   const [invite, setInvite] = useState<RoomInvite | null>(restored?.invite ?? null);
   const [invitePayload, setInvitePayload] = useState("");
   const [inviteError, setInviteError] = useState("");
@@ -210,9 +211,9 @@ export function PreparePage() {
 
         <div className="mt-7 space-y-3">
           <Field label="Your name" value={playerName} onChange={(value) => { invalidateEntry(); setPlayerName(value); }} />
-          <div className="flex items-center justify-between gap-3">
-            <h3 className="text-sm font-semibold uppercase tracking-normal text-[#18211f]">Your songs</h3>
-            <span className="text-xs text-[#536056]">{normalizedLinks.filter(Boolean).length}/{invite.songsPerPlayer} ready</span>
+          <div className="song-list-header">
+            <div><h3 className="text-sm font-semibold uppercase tracking-normal text-[#18211f]">Your songs</h3><span className="song-privacy-note">{showSongLinks ? "Links are visible on this phone." : "Links are hidden while you share your entry."}</span></div>
+            <div className="song-list-actions"><span className="text-xs text-[#536056]">{normalizedLinks.filter(Boolean).length}/{invite.songsPerPlayer} ready</span><button type="button" className="song-visibility-toggle" onClick={() => setShowSongLinks(current => !current)} aria-pressed={showSongLinks}><span>{showSongLinks ? "Hide links" : "Show links"}</span>{showSongLinks ? <EyeOff size={17} aria-hidden="true" /> : <Eye size={17} aria-hidden="true" />}</button></div>
           </div>
           <div className="space-y-3">
             {links.map((link, index) => (
@@ -229,6 +230,9 @@ export function PreparePage() {
                     setLinks((current) => current.map((item, itemIndex) => (itemIndex === index ? { value: event.target.value } : item)));
                   }}
                   placeholder="Paste a YouTube or YouTube Music link"
+                  type={showSongLinks ? "url" : "password"}
+                  autoComplete="off"
+                  aria-label={`Song ${index + 1}${showSongLinks ? "" : " (hidden)"}`}
                   className="control"
                 />
                 <div className="song-entry-status" role="status">
