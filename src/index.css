@@ -298,6 +298,12 @@ main h2:focus { outline:none; }
 .setup-toolbar .button { min-height:44px; padding:8px 12px; font-size:13px; }
 .room-manager { max-width:720px; margin:auto; }
 .room-manager-lede { margin:12px 0 20px; color:var(--muted); font-size:14px; }
+.room-settings-form { display:grid; gap:16px; margin:24px 0; padding:18px; border:1.5px solid var(--ink); border-radius:8px; background:var(--blue); }
+.room-settings-form > label { display:grid; gap:8px; color:var(--muted); font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; }
+.room-settings-form > label .select-trigger { text-transform:none; letter-spacing:0; font-weight:400; }
+.room-settings-form .button { width:100%; }
+.room-settings-note { margin:0; color:#414d46; font-size:12px; line-height:1.5; }
+.room-players-heading { margin:28px 0 0; font-size:20px; }
 .room-invite-panel { padding:16px; border:1px solid #707a69; border-radius:8px; background:var(--sheet); }
 .room-invite-panel > summary { min-height:44px; align-content:center; cursor:pointer; font-weight:700; }
 .room-invite-qr { display:block; width:220px; max-width:100%; margin:12px auto 20px; }

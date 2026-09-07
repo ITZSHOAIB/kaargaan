@@ -336,6 +336,36 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
     }
   }
 
+  function applyRoomSettings() {
+    const nextTheme = theme.trim();
+    if (!nextTheme) {
+      setError("Enter a theme before saving room settings.");
+      return;
+    }
+
+    const structureChanged = songCount !== players[0]?.links.length || playerCount !== players.length;
+    const nextPlayers = Array.from({ length: playerCount }, (_, index) => {
+      const existing = players[index];
+      return existing
+        ? { ...existing, name: index === 0 ? hostName.trim() : existing.name, links: Array.from({ length: songCount }, (_, songIndex) => existing.links[songIndex] ?? "") }
+        : { id: `p-${crypto.randomUUID()}`, name: `Player ${index + 1}`, links: Array.from({ length: songCount }, () => "") };
+    });
+
+    setTheme(nextTheme);
+    setPlayers(nextPlayers);
+    setLockedPlayerIds(current => structureChanged ? [] : current.filter(id => nextPlayers.some(player => player.id === id)));
+    setPendingEntry(null);
+    setImportedPlayerId(null);
+    setPendingNextPlayerIndex(null);
+    setCurrentPlayerIndex(0);
+    setScreen(structureChanged ? "invite" : screen);
+    setShowRoom(false);
+    setError("");
+    setMessage(structureChanged
+      ? "Room settings updated. Share the refreshed invite, then collect entries again."
+      : "Room settings updated. The room invite now carries the new details.");
+  }
+
   const currentPlayer = pendingEntry ?? players[currentPlayerIndex];
   const nextPlayer = pendingNextPlayerIndex !== null ? players[pendingNextPlayerIndex] : null;
   const isHostSlot = currentPlayerIndex === 0;
@@ -366,7 +396,7 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
         <p className="round-marker">Host · Step 2 of 4</p>
         <h2 className="mt-2 text-3xl font-semibold text-[#18211f]">Everyone: scan this room QR</h2>
         <p className="mt-3 text-sm leading-7 text-[#18211f]">
-          Everyone can scan at once. Need this QR later? Open Room & players from any setup step.
+          Everyone can scan at once. Need this QR later? Open Room settings from any setup step.
         </p>
         {roomQrDataUrl ? <img src={roomQrDataUrl} alt="Room invite QR code" className="mx-auto mt-6 h-64 w-64 rounded-md bg-white p-3" /> : <div className="mx-auto mt-6 flex h-64 w-64 items-center justify-center rounded-md bg-[#e2e9bb] text-sm text-[#536056]">Generating room QR…</div>}
         <p className="mt-5 text-center text-sm text-[#536056]">Players should scan this QR from the Player setup screen.</p>
@@ -590,19 +620,29 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
   }
 
   return <>
-    {roomId ? <div className="setup-toolbar"><span>{lockedPlayerIds.length}/{players.length} entries locked in</span><button type="button" className="button" onClick={() => { stopImportScanner(); setShowRoom(!showRoom); }}>{showRoom ? "Back to setup" : "Room & players"}</button></div> : null}
+    {roomId ? <div className="setup-toolbar"><span>{lockedPlayerIds.length}/{players.length} entries locked in</span><button type="button" className="button" onClick={() => { stopImportScanner(); setShowRoom(!showRoom); }}>{showRoom ? "Back to setup" : "Room settings"}</button></div> : null}
     {saveError ? <p role="alert" className="game-error">{saveError}</p> : null}
     {showRoom ? <>
       <RoomSubheader roomId={roomId} />
       <section className="sheet room-manager">
-        <h2>Room & players</h2>
-        <p className="room-manager-lede">Someone needs to rejoin? Share this same invite. Collected songs stay safe.</p>
+        <p className="round-marker">Host tools</p>
+        <h2>Room settings</h2>
+        <p className="room-manager-lede">Edit the rules or roster without creating a new room. The room ID stays the same.</p>
+        <div className="room-settings-form">
+          <Field label="Theme" value={theme} onChange={setTheme} />
+          <Field label="Host name" value={hostName} onChange={(value) => { setHostName(value); setPlayers(current => current.map((player, index) => index === 0 ? { ...player, name: value } : player)); }} />
+          <label><span>Songs per player</span><Select value={String(songCount)} onValueChange={(value) => setSongCount(Number(value))} options={[1, 2, 3, 4, 5].map((count) => ({ value: String(count), label: `${count} ${count === 1 ? "song" : "songs"}` }))} aria-label="Songs per player" /></label>
+          <label><span>Total players, including you</span><Select value={String(playerCount)} onValueChange={(value) => setPlayerCount(Number(value))} options={Array.from({ length: 8 }, (_, index) => ({ value: String(index + 3), label: `${index + 3} players` }))} aria-label="Total players, including you" /></label>
+          <p className="room-settings-note">Changing songs or player count keeps this room ID, but collected entries need to be checked again.</p>
+          <button type="button" className="button primary" onClick={applyRoomSettings}>Save room settings</button>
+        </div>
         <details className="room-invite-panel" open>
-          <summary>Share room invite</summary>
+          <summary>Share updated room invite</summary>
           {roomQrDataUrl ? <img src={roomQrDataUrl} alt="Room invite QR code" className="room-invite-qr" /> : <p>Generating room QR…</p>}
           <button type="button" className="button primary" onClick={() => void copyRoomInvite()}><Copy size={16} aria-hidden="true" />Copy room invite</button>
           <details className="entry-paste"><summary>Show invite text</summary><textarea readOnly value={roomPayload} aria-label="Room invite payload" className="control" /></details>
         </details>
+        <h3 className="room-players-heading">Players</h3>
         <p className="room-rules">{theme} · {songCount} {songCount === 1 ? "song" : "songs"} each · {players.length} players</p>
         <ul className="room-player-list">
           {players.map((player, index) => <li key={player.id}><div><strong>{player.name}</strong><span>{lockedPlayerIds.includes(player.id) ? "Songs already collected. No need to resubmit." : "Waiting for songs"}</span></div><button type="button" className="button" onClick={() => {
