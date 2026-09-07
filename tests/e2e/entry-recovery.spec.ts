@@ -94,11 +94,11 @@ test("real player retries report exact conflicts, preserve the room, and survive
   await player.getByRole("textbox", { name: "Song 1", exact: true }).fill("https://www.youtube.com/watch?v=dQw4w9WgXcQ&si=different-url");
   await player.getByRole("textbox", { name: "Song 2", exact: true }).fill("https://youtu.be/9bZkp7q19f0");
   await pasteEntry(host, await generatedCode(player));
-  await expect(host.getByRole("alert")).toContainText("Madhurima: Songs 1, 2 conflict");
+  await expect(host.getByRole("alert")).toContainText("Madhurima: Songs 1, 2 use the same YouTube video");
   await expect(host.locator(".entry-confirmation")).toHaveCount(0);
   await player.getByRole("textbox", { name: "Song 1", exact: true }).fill("https://youtu.be/kJQP7kiw5Fk");
   await pasteEntry(host, await generatedCode(player));
-  await expect(host.getByRole("alert")).toContainText("Madhurima: Song 2 conflicts");
+  await expect(host.getByRole("alert")).toContainText("Madhurima: Song 2 uses the same YouTube video");
   await host.screenshot({ path: "/tmp/kaargaan-song-conflict.png", fullPage: true });
   await player.getByRole("textbox", { name: "Song 2", exact: true }).fill("https://youtu.be/Zi_XLOBDo_Y");
   await player.reload();

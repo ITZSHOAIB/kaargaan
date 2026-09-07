@@ -15,5 +15,5 @@ export function conflictingSongNumbers(links: string[], existingLinks: string[])
 }
 
 export function conflictMessage(name: string, positions: number[]): string {
-  return `${name}: ${positions.length === 1 ? "Song" : "Songs"} ${positions.join(", ")} ${positions.length === 1 ? "conflicts" : "conflict"} with another entry. Replace ${positions.length === 1 ? "this song" : "these songs"}, generate a fresh QR or code, then import again. Keep the other songs.`;
+  return `${name}: ${positions.length === 1 ? "Song" : "Songs"} ${positions.join(", ")} ${positions.length === 1 ? "uses" : "use"} the same YouTube video as another entry. Different YouTube URLs can still point to the same video. Replace ${positions.length === 1 ? "this song" : "these songs"}, generate a fresh QR or code, then import again. Keep the other songs.`;
 }
