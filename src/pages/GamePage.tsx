@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import QrScanner from "qr-scanner";
 import { qrScanRegion } from "../lib/qrScanRegion";
-import { ArrowRight, Check, Disc3, ScanLine, Trophy, Copy } from "lucide-react";
+import { ArrowRight, Check, Disc3, ScanLine, Trophy, Copy, Sparkles, Target, ShieldCheck } from "lucide-react";
 import {
   beginVoting,
   createGame,
@@ -22,6 +22,7 @@ import type { Game, Player, Round, Submission } from "../lib/types";
 import { conflictingSongNumbers, conflictMessage } from "../lib/songConflicts";
 import { HOST_DRAFT_KEY, loadHostDraft, saveDraft, useDraftStatus, type SetupPlayer, type SetupScreen } from "../lib/setupDraft";
 import { Select } from "../components/ui/Select";
+import { revealMoment } from "../lib/revealMoment";
 
 const qrScannerWorkerPath = new URL("qr-scanner/qr-scanner-worker.min.js", import.meta.url).toString();
 QrScanner.WORKER_PATH = qrScannerWorkerPath;
@@ -791,7 +792,7 @@ function GameEndControl({ onEnd, confirmEnd, setConfirmEnd }: { onEnd: () => voi
 
 function StageFrame({ submission }: { submission: Submission }) {
   return <div className="stage-frame mt-5">
-    <div className="stage-frame-bar"><span>Now playing</span><span>Mystery track</span></div>
+    <div className="stage-frame-bar"><span><i className="live-dot" aria-hidden="true" />Now playing</span><span>Mystery track</span></div>
     <div className="playback aspect-video">
       <iframe title="Current song" className="h-full w-full" src={`https://www.youtube.com/embed/${submission.videoId}`} allow="autoplay; encrypted-media" />
     </div>
@@ -808,7 +809,7 @@ function ListeningScreen({ game, submission, message, persistenceError, scores, 
       <RoundStepper active="listening" />
       <div className="stage-topline"><p className="round-marker">Round {game.activeRoundIndex + 1} <span>of {game.rounds.length}</span></p><span className="phase-chip phase-listening">{phaseLabel}</span></div>
       <div className="listen-heading"><h2 className="stage-title">Press play.<br /><em>Keep a straight face.</em></h2><Disc3 className="record-emblem" size={64} aria-hidden="true" /></div>
-      <p className="stage-lede">One song. One secret owner. Let everyone listen before opening the vote.</p>
+      <p className="stage-lede">Play the mystery track for everyone. Keep the owner hidden until the room is ready to vote.</p>
       <StageFrame submission={submission} />
       <p role="status" className="stage-status-copy">{message}</p>
       <div className="stage-actions"><a href={`https://www.youtube.com/watch?v=${submission.videoId}`} target="_blank" rel="noreferrer" className="button">Open playback</a><button type="button" onClick={onOpenVoting} className="button primary">Open voting <ArrowRight size={18} aria-hidden="true" /></button><button type="button" onClick={onSkip} className="button danger-button">Skip round</button></div>
@@ -847,6 +848,14 @@ function ResultScreen({ game, round, owner, scores, onNext, onEnd, confirmEnd, s
   game: Game; round: Round; owner?: Player; scores: ScoreEntry[]; onNext: () => void; onEnd: () => void; confirmEnd: boolean; setConfirmEnd: (value: boolean) => void;
 }) {
   const revealed = round.phase === "revealed";
+  const moment = revealMoment(game, round);
+  const momentCopy = moment === "perfect-bluff"
+    ? { label: "PERFECT BLUFF", title: `${owner?.name ?? "The owner"} fooled the whole room.`, body: "Nobody picked the owner, so the song owner takes 10 points.", Icon: ShieldCheck }
+    : moment === "solo-guess"
+      ? { label: "ONE SHARP GUESS", title: "Someone read the room perfectly.", body: "One correct guess earns 10 points. That was a clean read.", Icon: Target }
+      : moment === "room-read"
+        ? { label: "THE ROOM GOT THERE", title: "A shared read on the mystery track.", body: "Two or more correct guesses earn 5 points each.", Icon: Sparkles }
+        : null;
   return <section className="game-screen result-screen">
     <div className="sheet result-sheet">
       <RoundStepper active="result" />
@@ -854,6 +863,7 @@ function ResultScreen({ game, round, owner, scores, onNext, onEnd, confirmEnd, s
       <div className={`result-stamp ${revealed ? "success" : "skipped"}`}>{revealed ? "REVEALED" : "SKIPPED"}</div>
       <h2 className="screen-title">{revealed ? `${owner?.name ?? "Someone"} brought this song.` : "No points this round."}</h2>
       <p className="screen-lede">{revealed ? "The room has its answer. Check the scores, then move to the next mystery track." : "Move on when the room is ready."}</p>
+      {momentCopy ? <div className={`reveal-moment ${moment}`} role="status" aria-live="polite"><momentCopy.Icon size={24} aria-hidden="true" /><div><span>{momentCopy.label}</span><strong>{momentCopy.title}</strong><p>{momentCopy.body}</p></div></div> : null}
       {round.result?.kind === "revealed" ? <ul className="round-awards" aria-label="Points this round">{Object.entries(round.result.awards).map(([id, points]) => <li key={id}><span>{game.players.find((player) => player.id === id)?.name}</span><strong>+{points}</strong></li>)}</ul> : null}
       <button type="button" onClick={onNext} className="button primary next-round-button">{game.activeRoundIndex + 1 === game.rounds.length ? "Show final standings" : "Next round"}</button>
     </div>

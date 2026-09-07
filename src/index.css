@@ -145,6 +145,8 @@ main h2:focus { outline:none; }
 .stage-lede,.screen-lede { margin:16px 0 0; max-width:55ch; color:var(--muted); font-size:15px; line-height:1.6; }
 .stage-frame { margin-top:24px; padding:12px; border:2px solid var(--ink); border-radius:8px; background:var(--blue); }
 .stage-frame-bar { display:flex; justify-content:space-between; gap:12px; margin-bottom:10px; color:var(--ink); font-size:12px; font-weight:700; }
+.stage-frame-bar > span:first-child { display:inline-flex; align-items:center; gap:7px; }
+.live-dot { width:8px; height:8px; display:inline-block; border-radius:50%; background:var(--coral); border:1px solid var(--ink); }
 .stage-frame .playback { padding:0; border:1px solid var(--ink); border-radius:4px; overflow:hidden; background:var(--sheet); }
 .stage-status-copy { color:var(--muted); margin-top:16px; font-size:14px; }
 .stage-actions { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:20px; }
@@ -193,6 +195,16 @@ main h2:focus { outline:none; }
 .round-awards { list-style:none; padding:0; margin:24px 0 0; display:flex; justify-content:center; flex-wrap:wrap; gap:12px; }
 .round-awards li { display:flex; align-items:center; gap:12px; padding:10px 14px; border:1px solid var(--ink); background:var(--sheet); border-radius:5px; }
 .round-awards strong { font-size:22px; }
+.reveal-moment { display:flex; align-items:flex-start; gap:12px; text-align:left; margin:24px auto 0; padding:16px; max-width:520px; border:2px solid var(--ink); border-radius:8px; box-shadow:3px 3px 0 var(--ink); }
+.reveal-moment > svg { flex:none; margin-top:2px; }
+.reveal-moment div { display:grid; gap:3px; }
+.reveal-moment span { font-size:11px; font-weight:800; letter-spacing:.08em; }
+.reveal-moment strong { font-size:16px; line-height:1.25; }
+.reveal-moment p { margin:2px 0 0; color:var(--muted); font-size:13px; line-height:1.5; }
+.reveal-moment.perfect-bluff { background:var(--lime); }
+.reveal-moment.solo-guess { background:var(--coral); }
+.reveal-moment.solo-guess p { color:#4b2b23; }
+.reveal-moment.room-read { background:var(--blue); }
 .game-error { padding:14px; border:1px solid #922c22; background:#fff4ef; color:#922c22; border-radius:6px; font-size:14px; }
 .game-feedback { max-width:800px; margin:0 auto 20px; }
 .collection-screen { display:grid; gap:24px; max-width:640px; margin:auto; }
@@ -303,6 +315,35 @@ main h2:focus { outline:none; }
 .new-room-control { border-top:1px solid #92998a; padding-top:12px; }
 .new-room-control summary { min-height:44px; align-content:center; cursor:pointer; font-size:13px; }
 .new-room-control p { margin:0 0 16px; font-size:14px; color:#922c22; }
+
+/* The home and setup surfaces use the same tabletop language as the game reveal. */
+.home-layout { align-items:start; gap:40px; max-width:1080px; margin:0 auto; }
+.invitation { padding:30px 0; }
+.invitation h2 { max-width:10ch; }
+.invitation > p { font-size:16px; line-height:1.7; }
+.role-option { min-height:78px; border-width:2px; border-radius:9px; box-shadow:3px 3px 0 transparent; }
+.role-option:hover,.role-option:focus-visible { box-shadow:3px 3px 0 var(--ink); transform:translate(-1px,-1px); }
+.role-option-primary { box-shadow:3px 3px 0 var(--ink); }
+.rule-sheet { border-width:2px; border-radius:10px; box-shadow:6px 6px 0 var(--ink); }
+.resume-banner { border-width:2px; border-radius:8px; box-shadow:3px 3px 0 var(--ink); }
+.resume-banner .button { min-height:42px; padding:9px 13px; font-size:13px; }
+.player-join,.player-join + section .sheet,.collection-screen > .collection-panel { border-width:2px; border-radius:10px; box-shadow:5px 5px 0 var(--ink); }
+.room-summary { border-width:2px; border-radius:8px; overflow:hidden; box-shadow:3px 3px 0 var(--ink); }
+.room-summary > div { background:var(--lime); }
+.song-entry { border-width:1.5px; border-radius:8px; box-shadow:2px 2px 0 transparent; transition:box-shadow .15s,transform .15s; }
+.song-entry:focus-within { border-color:var(--ink); box-shadow:2px 2px 0 var(--ink); transform:translate(-1px,-1px); }
+.player-room-tools { border-bottom-width:2px; }
+.scan-icon { background:var(--lime); border-width:2px; }
+.join-instruction { border-width:1.5px; border-radius:8px; }
+.collection-panel { background:var(--sheet); }
+.entry-paste textarea,.collection-fields input,.player-join textarea { border-width:1.5px; }
+
+@media(max-width:760px) {
+ .invitation { padding:0; }
+ .invitation h2 { max-width:11ch; }
+ .rule-sheet { padding:22px; box-shadow:4px 4px 0 var(--ink); }
+ .reveal-moment { margin-top:20px; padding:14px; }
+}
 @media(max-width:600px) {
  .room-player-list li { align-items:stretch; flex-direction:column; gap:10px; }
  .room-player-list .button { width:100%; }
