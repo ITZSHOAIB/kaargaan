@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import QrScanner from "qr-scanner";
-import { Copy } from "lucide-react";
+import { ArrowRight, Check, Disc3, ScanLine, Trophy, Copy } from "lucide-react";
 import {
   beginVoting,
   createGame,
@@ -92,11 +92,20 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
   const [message, setMessage] = useState("Set the roster, then hand the phone around one player at a time.");
   const [importPayload, setImportPayload] = useState("");
   const [importedPlayerId, setImportedPlayerId] = useState<string | null>(null);
-  const [importMessage, setImportMessage] = useState("Waiting for this player's entry.");
   const [importError, setImportError] = useState("");
   const [importState, setImportState] = useState<"idle" | "scanning" | "blocked">("idle");
   const importVideoRef = useRef<HTMLVideoElement | null>(null);
   const importScannerRef = useRef<QrScanner | null>(null);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      const heading = document.querySelector<HTMLElement>("main h2");
+      heading?.setAttribute("tabindex", "-1");
+      heading?.focus({ preventScroll: true });
+      window.scrollTo({ top: 0, behavior: "instant" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [screen, currentPlayerIndex, importedPlayerId]);
 
   const roomInvite = roomId && roomToken
     ? createRoomInvite({ roomId, roomToken, theme, songsPerPlayer: songCount, playerCount })
@@ -195,7 +204,7 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
       setPendingNextPlayerIndex(nextIndex);
       setImportedPlayerId(null);
       setScreen("handoff");
-      setMessage(`Saved ${players[currentPlayerIndex].name}. Pass the phone to ${players[nextIndex].name}.`);
+      setMessage(`Saved ${players[currentPlayerIndex].name}. Ask ${players[nextIndex].name} to show their entry.`);
       setError("");
       return;
     }
@@ -282,10 +291,10 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
     setPlayers((current) =>
       current.map((player, index) => (index === currentPlayerIndex ? { ...player, name: index === 0 ? player.name : result.playerName, links: result.links } : player))
     );
+    stopImportScanner();
     setImportPayload("");
     setImportedPlayerId(players[currentPlayerIndex].id);
     setImportError("");
-    setImportMessage(`Imported ${result.links.length} songs for ${result.playerName}.`);
     setMessage(`Imported ${result.links.length} songs for ${result.playerName}.`);
     return true;
   }
@@ -366,6 +375,8 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
 
   if (screen === "handoff" && nextPlayer) {
     return (
+      <>
+      <RoomSubheader roomId={roomId} />
       <section className="mx-auto max-w-3xl sheet">
         <p className="round-marker">Host · Step 2 of 3</p>
         <h2 className="mt-2 text-3xl font-semibold text-[#18211f]">Collect Player {pendingNextPlayerIndex! + 1}</h2>
@@ -391,6 +402,7 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
           Scan Player {pendingNextPlayerIndex! + 1} submission
         </button>
       </section>
+      </>
     );
   }
 
@@ -401,6 +413,8 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
     }));
 
     return (
+      <>
+      <RoomSubheader roomId={roomId} />
       <section className="mx-auto max-w-3xl sheet">
         <p className="round-marker">Host · Step 3 of 3</p>
         <h2 className="mt-2 text-3xl font-semibold text-[#18211f]">Start the game when everyone is ready</h2>
@@ -435,150 +449,64 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
           Review links
         </button>
       </section>
-    );
-  }
-
-  if (screen === "private") {
-    return (
-      <>
-      <RoomSubheader roomId={roomId} />
-      <section className="host-collection-layout grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="host-collection-intro order-1 lg:col-span-2">
-          <p className="round-marker">Host · Step 2 of 3</p>
-          <h2 className="mt-2 text-3xl font-semibold text-[#18211f]">Collect songs from {currentPlayer.name}</h2>
-          <p className="mt-3 text-sm leading-7 text-[#18211f]">
-            Ask {currentPlayer.name} to prepare songs on their own phone. Scan their QR in the room, or paste their encrypted entry if they are joining through Discord.
-          </p>
-        </div>
-        <div className={`${isHostSlot || importedPlayerId === currentPlayer.id || error ? "sheet" : "host-collection-footer"} host-collection-form ${isHostSlot ? "order-2" : "order-3"} lg:order-2`}>
-          {isHostSlot ? (
-            <div className="mt-6 space-y-3">
-              <p className="text-sm font-semibold text-[#18211f]">Your songs</p>
-              <p className="text-sm text-[#536056]">You are the host and a player. Enter your songs directly on this phone.</p>
-              {Array.from({ length: songCount }, (_, songIndex) => (
-                <input
-                  key={songIndex}
-                  aria-label={`${currentPlayer.name} song ${songIndex + 1}`}
-                  value={currentPlayer.links[songIndex] ?? ""}
-                  onChange={(event) => updateLink(currentPlayerIndex, songIndex, event.target.value)}
-                  placeholder={`Song ${songIndex + 1} YouTube link`}
-                  className="w-full rounded-md border border-[#7b846f] bg-[#faf8f0] px-3 py-3 text-sm text-[#18211f] outline-none"
-                />
-              ))}
-            </div>
-          ) : importedPlayerId === currentPlayer.id ? (
-            <div className="mt-6 rounded-md border border-[#7b846f] bg-[#e2e9bb] p-4">
-              <p className="font-semibold text-[#18211f]">{songCount} songs received</p>
-              <p className="mt-1 text-sm text-[#536056]">The links are hidden on this phone until the game reveals each owner.</p>
-            </div>
-          ) : null}
-          {error ? <p className="mt-4 text-sm text-[#922c22]">{error}</p> : null}
-          <div className="mt-6 flex flex-wrap gap-3">
-            {isHostSlot ? <button
-              type="button"
-              onClick={lockCurrentPlayer}
-              className="rounded-md bg-[#ef7657] action px-5 py-3 text-sm font-semibold text-[#18211f]"
-            >
-              Save my songs
-            </button> : null}
-            {!isHostSlot && importedPlayerId === currentPlayer.id ? <button
-              type="button"
-              onClick={lockCurrentPlayer}
-              className="rounded-md bg-[#ef7657] action px-5 py-3 text-sm font-semibold text-[#18211f]"
-            >
-              Confirm player submission
-            </button> : null}
-            <button
-              type="button"
-              onClick={() => setScreen("roster")}
-              className="rounded-md border border-[#7b846f] bg-[#faf8f0] px-4 py-3 text-sm text-[#18211f]"
-            >
-              Back to roster
-            </button>
-          </div>
-          <p className="mt-4 text-sm text-[#536056]">{message}</p>
-        </div>
-
-        <aside className={`sheet ledger host-scan-column ${isHostSlot ? "order-3" : "order-2"} lg:order-3`}>
-          {!isHostSlot ? <details className="rounded-md border border-[#7b846f] bg-[#faf8f0] p-4" open>
-                <summary className="cursor-pointer text-base font-semibold text-[#18211f]">Scan {currentPlayer.name}&apos;s entry</summary>
-                <div className="pt-3">
-                  <p className="text-sm text-[#536056]">
-                Scan their QR in the room, or paste the encrypted entry they shared through Discord.
-              </p>
-            <video
-              ref={importVideoRef}
-              className={`qr-camera mt-3 rounded-md border border-[#7b846f] bg-black ${importState === "scanning" ? "" : "qr-camera-idle"}`}
-              muted
-              playsInline
-            />
-            <div className="mt-3 flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={() => void startImportScanner()}
-                className="w-full rounded-md bg-[#ef7657] action px-4 py-3 text-sm font-semibold text-[#18211f]"
-              >
-                Scan {currentPlayer.name} QR
-              </button>
-            </div>
-            {importState === "scanning" ? <button type="button" onClick={stopImportScanner} className="mt-3 w-full rounded-md border border-[#7b846f] bg-[#faf8f0] px-4 py-3 text-sm font-semibold text-[#18211f]">Stop scan</button> : null}
-            <details className="mt-4">
-              <summary className="cursor-pointer text-sm font-semibold text-[#18211f]">Paste encrypted entry instead</summary>
-              <textarea
-                value={importPayload}
-                onChange={(event) => setImportPayload(event.target.value)}
-                placeholder="Paste the encrypted entry from Discord"
-                className="mt-3 min-h-28 w-full rounded-md border border-[#7b846f] bg-[#faf8f0] p-3 text-sm text-[#18211f] outline-none"
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  if (importPayload.startsWith(ENCRYPTED_SLIP_PREFIX)) {
-                    void applyEncryptedSlip(importPayload);
-                  } else {
-                    applyImportedSlip(importPayload);
-                  }
-                }}
-                className="mt-3 rounded-md bg-[#ef7657] action px-4 py-2 text-sm font-semibold text-[#18211f]"
-              >
-                Import entry
-              </button>
-            </details>
-              <p className="mt-3 text-xs uppercase tracking-normal text-[#536056]">Status: {importState}</p>
-              <p className="mt-2 text-sm text-[#536056]">{importMessage}</p>
-              {importError ? <p className="mt-2 text-sm text-[#922c22]">{importError}</p> : null}
-            </div>
-          </details> : null}
-          <details className="mt-5 border-t border-[#a6ad99] pt-5">
-            <summary className="cursor-pointer text-base font-semibold text-[#18211f]">Handoff order · {currentPlayer.name}</summary>
-            <p className="mt-2 text-sm text-[#536056]">Each player sees only their own songs. The rest stay hidden.</p>
-            <div className="mt-4 space-y-2">
-              {players.map((player, index) => (
-                <div
-                  key={player.id}
-                  className={`rounded-md border px-4 py-3 text-sm ${
-                    index === currentPlayerIndex
-                      ? "border-[#18211f] bg-[#faf8f0] text-[#18211f]"
-                      : index < currentPlayerIndex
-                        ? "border-[#7b846f] bg-[#faf8f0] text-[#536056]"
-                        : "border-[#7b846f] bg-white text-[#536056]"
-                  }`}
-                >
-                  {index + 1}. {player.name}
-                  <span className="ml-2 text-xs uppercase tracking-normal">
-                    {index < currentPlayerIndex ? "Locked" : index === currentPlayerIndex ? "Current" : "Waiting"}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </details>
-        </aside>
-      </section>
       </>
     );
   }
 
+  if (screen === "private") {
+    const received = !isHostSlot && importedPlayerId === currentPlayer.id;
+    return <>
+      <RoomSubheader roomId={roomId} />
+      <section className="collection-screen">
+        <div className="collection-heading">
+          <p className="round-marker">Player {currentPlayerIndex + 1} of {players.length}</p>
+          <h2 tabIndex={-1}>{isHostSlot ? "Your turn to pick." : received ? `${currentPlayer.name} is in.` : `Collect songs from ${currentPlayer.name}`}</h2>
+          <p>{isHostSlot ? "You play too. Add your own YouTube links here." : received ? "Check the name, then lock in this entry." : "Scan their submission QR, or paste the entry they shared."}</p>
+        </div>
+        <div className="sheet collection-panel">
+          {isHostSlot ? <div className="collection-fields">
+            {Array.from({ length: songCount }, (_, songIndex) => <label key={songIndex}>
+              <span>Song {songIndex + 1}</span>
+              <input aria-label={`${currentPlayer.name} song ${songIndex + 1}`} value={currentPlayer.links[songIndex] ?? ""}
+                onChange={(event) => updateLink(currentPlayerIndex, songIndex, event.target.value)} placeholder="Paste a YouTube link" className="control" />
+            </label>)}
+            <button type="button" onClick={lockCurrentPlayer} className="button primary">Save my songs <ArrowRight size={18} aria-hidden="true" /></button>
+          </div> : received ? <div className="entry-confirmation">
+            <span className="confirmation-seal" aria-hidden="true"><Check size={32} /></span>
+            <h3>{songCount} {songCount === 1 ? "song" : "songs"} received</h3>
+            <p>Saved privately for <strong>{currentPlayer.name}</strong>. Ready for the next player?</p>
+            <button type="button" onClick={lockCurrentPlayer} className="button primary">Confirm player submission <Check size={18} aria-hidden="true" /></button>
+            <button type="button" className="button" onClick={() => {
+              stopImportScanner();
+              setPlayers((current) => current.map((player, index) => index === currentPlayerIndex ? { ...player, name: `Player ${index + 1}`, links: Array.from({ length: songCount }, () => "") } : player));
+              setImportedPlayerId(null); setImportPayload(""); setImportError(""); setError("");
+            }}>Discard and scan again</button>
+          </div> : <div className="collection-scanner">
+            <div className="scan-prompt" aria-hidden="true"><ScanLine size={48} /><span>Their phone. Your scanner.</span></div>
+            <video ref={importVideoRef} className={`qr-camera ${importState === "scanning" ? "" : "qr-camera-idle"}`} muted playsInline />
+            <button type="button" onClick={() => void startImportScanner()} className="button primary"><ScanLine size={20} aria-hidden="true" />Scan {currentPlayer.name} QR</button>
+            {importState === "scanning" ? <button type="button" onClick={stopImportScanner} className="button">Stop scan</button> : null}
+            <details className="entry-paste">
+              <summary>Paste encrypted entry instead</summary>
+              <textarea aria-label="Paste the encrypted entry from Discord" value={importPayload} onChange={(event) => setImportPayload(event.target.value)} placeholder="Paste the encrypted entry from Discord" className="control" />
+              <button type="button" onClick={() => { if (importPayload.startsWith(ENCRYPTED_SLIP_PREFIX)) void applyEncryptedSlip(importPayload); else applyImportedSlip(importPayload); }} className="button primary">Import entry</button>
+            </details>
+            {importError ? <p role="alert" className="game-error">{importError}</p> : null}
+            {importState === "scanning" ? <p role="status">Hold the QR inside the square.</p> : null}
+          </div>}
+          {error ? <p role="alert" className="game-error">{error}</p> : null}
+        </div>
+        <div className="collection-footer">
+          <button type="button" onClick={() => { stopImportScanner(); setScreen("roster"); }} className="button">Back to roster</button>
+          <span>{currentPlayerIndex} of {players.length} players locked in</span>
+        </div>
+      </section>
+    </>;
+  }
+
   return (
+    <>
+    <RoomSubheader roomId={roomId} />
     <section className="mx-auto max-w-4xl sheet">
       <p className="round-marker">Host · Step 1 of 4</p>
       <h2 className="mt-2 text-3xl font-semibold text-[#18211f]">Set up the room</h2>
@@ -638,6 +566,7 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
       </button>
       <p className="mt-4 text-sm text-[#536056]">{message}</p>
     </section>
+    </>
   );
 
   async function startImportScanner() {
@@ -658,7 +587,6 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
             ? applyEncryptedSlip(result.data)
             : Promise.resolve(applyImportedSlip(result.data));
           void imported.then((accepted) => {
-            setImportState("idle");
             if (accepted) stopImportScanner();
           });
         },
@@ -690,6 +618,16 @@ function Playing({ game, setGame }: { game: Game; setGame: (game: Game | null) =
   const round = currentRound(game);
   const submission = game.submissions.find((candidate) => candidate.id === round?.submissionId);
   const scores = standings(game);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      const heading = document.querySelector<HTMLElement>("main h2");
+      heading?.setAttribute("tabindex", "-1");
+      heading?.focus({ preventScroll: true });
+      window.scrollTo({ top: 0, behavior: "instant" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [round?.id, round?.phase, game.status]);
 
   function commit(next: Game, status?: string) {
     try {
@@ -723,47 +661,10 @@ function Playing({ game, setGame }: { game: Game; setGame: (game: Game | null) =
   }, [game.id, game.saveRevision]);
 
   if (game.status === "completed") {
-    const topScore = scores[0]?.score ?? 0;
-    const winners = topScore > 0 ? scores.filter((player) => player.score === topScore) : [];
-
-    return (
-      <section className="mx-auto max-w-3xl sheet">
-        <p className="text-xs uppercase tracking-normal text-[#18211f]">Game complete</p>
-        <h2 className="mt-2 text-3xl font-semibold text-[#18211f]">Final standings</h2>
-        <p className="mt-3 text-sm leading-7 text-[#18211f]">
-          {game.endedEarly
-            ? "The game ended early. These scores reflect the rounds revealed so far."
-            : topScore === 0
-              ? "No scored rounds."
-            : winners.length === 1
-              ? `${winners[0].name} wins with ${topScore} points.`
-              : `Tied winners: ${winners.map((player) => player.name).join(", ")} with ${topScore} points.`}
-        </p>
-        <div className="mt-6 space-y-2">
-          {scores.map((player, index) => (
-            <div
-              key={player.id}
-              className="flex items-center justify-between rounded-md border border-[#7b846f] bg-[#faf8f0] px-4 py-3"
-            >
-              <span className="text-[#18211f]">
-                {index + 1}. {player.name}
-              </span>
-              <span className="text-[#18211f]">{player.score} pts</span>
-            </div>
-          ))}
-        </div>
-        <button
-          type="button"
-          onClick={() => {
-            clearCurrentGame();
-            setGame(null);
-          }}
-          className="mt-6 rounded-md border border-[#7b846f] bg-[#faf8f0] px-4 py-2 text-sm text-[#18211f]"
-        >
-          New game
-        </button>
-      </section>
-    );
+    return <>
+      {game.roomId ? <RoomSubheader roomId={game.roomId} /> : null}
+      <FinalStandings game={game} scores={scores} onNew={() => { clearCurrentGame(); setGame(null); }} />
+    </>;
   }
 
   if (!round || !submission) {
@@ -790,7 +691,7 @@ function Playing({ game, setGame }: { game: Game; setGame: (game: Game | null) =
   if (round.phase === "voting") {
     return <>
       {game.roomId ? <RoomSubheader roomId={game.roomId} /> : null}
-      <VotingScreen game={game} round={round} scores={scores} voteCount={voteCount} allVoted={allVoted} onVote={(voterId, ownerId) => {
+      <GameFeedback error={persistenceError} message={message} /><VotingScreen game={game} round={round} scores={scores} voteCount={voteCount} allVoted={allVoted} onVote={(voterId, ownerId) => {
         try { commit(recordVote(game, voterId, ownerId), "Vote recorded."); }
         catch (caught) { setMessage(caught instanceof Error ? caught.message : "Vote rejected."); }
       }} onReveal={() => {
@@ -802,7 +703,7 @@ function Playing({ game, setGame }: { game: Game; setGame: (game: Game | null) =
 
   return <>
     {game.roomId ? <RoomSubheader roomId={game.roomId} /> : null}
-    <ResultScreen game={game} round={round} owner={owner} scores={scores} onNext={() => commit(nextRound(game), game.activeRoundIndex + 1 === game.rounds.length ? "Game complete." : "Next round ready.")} onEnd={endGame} confirmEnd={confirmEnd} setConfirmEnd={setConfirmEnd} />
+    <GameFeedback error={persistenceError} message={message} /><ResultScreen game={game} round={round} owner={owner} scores={scores} onNext={() => commit(nextRound(game), game.activeRoundIndex + 1 === game.rounds.length ? "Game complete." : "Next round ready.")} onEnd={endGame} confirmEnd={confirmEnd} setConfirmEnd={setConfirmEnd} />
   </>;
 
 }
@@ -812,7 +713,7 @@ type ScoreEntry = Player & { score: number };
 function RoundStepper({ active }: { active: "listening" | "voting" | "result" }) {
   const steps = [["listening", "Listen"], ["voting", "Vote"], ["result", "Reveal"]] as const;
   return <ol className="round-stepper" aria-label="Round steps">
-    {steps.map(([key, label], index) => <li key={key} className={key === active ? "active" : ""}>
+    {steps.map(([key, label], index) => <li key={key} aria-current={key === active ? "step" : undefined} className={key === active ? "active" : ""}>
       <span>{index + 1}</span>{label}
     </li>)}
   </ol>;
@@ -822,8 +723,8 @@ function ScoreStrip({ scores }: { scores: ScoreEntry[] }) {
   return <section className="score-strip" aria-label="Current scores">
     <div className="score-strip-heading"><span>Scoreboard</span><small>After revealed rounds</small></div>
     <div className="score-strip-list">
-      {scores.map((player, index) => <div key={player.id} className={index === 0 ? "leader" : ""}>
-        <span className="score-rank">{index + 1}</span><span className="score-name">{player.name}</span><strong>{player.score}</strong>
+      {scores.map((player) => <div key={player.id} className={player.score > 0 && player.score === scores[0].score ? "leader" : ""}>
+        <span className="score-rank">{scores.findIndex((entry) => entry.score === player.score) + 1}</span><span className="score-name" title={player.name}>{player.name}</span><strong>{player.score}</strong>
       </div>)}
     </div>
   </section>;
@@ -857,14 +758,14 @@ function ListeningScreen({ game, submission, message, persistenceError, scores, 
 }) {
   return <section className="game-screen listening-screen">
     <div className="sheet stage-sheet">
-      {persistenceError ? <p className="mb-4 rounded-md border border-rose-300/20 bg-rose-300/10 px-4 py-3 text-sm text-[#922c22]">{persistenceError}</p> : null}
+      {persistenceError ? <p role="alert" className="game-error">{persistenceError}</p> : null}
       <RoundStepper active="listening" />
       <div className="stage-topline"><p className="round-marker">Round {game.activeRoundIndex + 1} <span>of {game.rounds.length}</span></p><span className="phase-chip phase-listening">{phaseLabel}</span></div>
-      <p className="stage-kicker">The mystery track</p><h2 className="stage-title">Listen closely.</h2>
-      <p className="stage-lede">Play the song for the room. Keep the owner hidden until everyone has made their call.</p>
+      <div className="listen-heading"><h2 className="stage-title">Press play.<br /><em>Keep a straight face.</em></h2><Disc3 className="record-emblem" size={64} aria-hidden="true" /></div>
+      <p className="stage-lede">One song. One secret owner. Let everyone listen before opening the vote.</p>
       <StageFrame submission={submission} />
       <p role="status" className="stage-status-copy">{message}</p>
-      <div className="stage-actions"><a href={`https://www.youtube.com/watch?v=${submission.videoId}`} target="_blank" rel="noreferrer" className="button primary">Open playback</a><button type="button" onClick={onOpenVoting} className="button">Open voting</button><button type="button" onClick={onSkip} className="button danger-button">Skip round</button></div>
+      <div className="stage-actions"><a href={`https://www.youtube.com/watch?v=${submission.videoId}`} target="_blank" rel="noreferrer" className="button">Open playback</a><button type="button" onClick={onOpenVoting} className="button primary">Open voting <ArrowRight size={18} aria-hidden="true" /></button><button type="button" onClick={onSkip} className="button danger-button">Skip round</button></div>
     </div>
     <ScoreStrip scores={scores} />
     <GameEndControl onEnd={onEnd} confirmEnd={confirmEnd} setConfirmEnd={setConfirmEnd} />
@@ -879,16 +780,17 @@ function VotingScreen({ game, round, scores, voteCount, allVoted, onVote, onReve
   return <section className="game-screen voting-screen">
     <div className="sheet vote-sheet">
       <RoundStepper active="voting" />
-      <p className="stage-kicker">Room call</p><h2 className="screen-title">Who picked the song?</h2>
-      <p className="screen-lede">Choose a player for each guess. Tap again anytime before the reveal.</p>
-      <div className="vote-meter" aria-label={`${voteCount} of ${game.players.length} votes recorded`}><strong>{voteCount}<span>/{game.players.length}</span></strong><div><span>Votes recorded</span><div className="vote-dots">{game.players.map((player) => <i key={player.id} className={round.votes[player.id] ? "filled" : ""} />)}</div></div></div>
+      <p className="round-number">Round {game.activeRoundIndex + 1} / {game.rounds.length}</p><h2 className="screen-title">Who picked<br /><em>the song?</em></h2>
+      <p className="screen-lede">Record everyone’s guess. Change any choice until the reveal.</p>
+      <div className="vote-meter" role="status" aria-label={`${voteCount} of ${game.players.length} votes recorded`}><strong>{voteCount}<span>/{game.players.length}</span></strong><div><span>Votes recorded</span><div className="vote-dots" aria-hidden="true">{game.players.map((player) => <i key={player.id} className={round.votes[player.id] ? "filled" : ""} />)}</div></div></div>
       <div className="vote-board">
         {orderedVoters.map((voter) => <fieldset key={voter.id} className="vote-row" data-voter-id={voter.id}>
-          <legend className="text-xs uppercase tracking-normal text-[#536056]">{voter.name}&apos;s guess</legend>
-          <div className="vote-options mt-2">{game.players.filter((player) => player.id !== voter.id).map((candidate) => <button key={candidate.id} type="button" className={`vote-option${round.votes[voter.id] === candidate.id ? " selected" : ""}`} aria-label={`${voter.name} votes for ${candidate.name}`} aria-pressed={round.votes[voter.id] === candidate.id} onClick={() => onVote(voter.id, candidate.id)}>{candidate.name}</button>)}</div>
+          <legend><span>{voter.name}&apos;s guess</span><span className="vote-choice-state">{round.votes[voter.id] ? "Selected" : "Choose one"}</span></legend>
+          <div className="vote-options mt-2">{game.players.filter((player) => player.id !== voter.id).map((candidate) => <button key={candidate.id} type="button" className={`vote-option${round.votes[voter.id] === candidate.id ? " selected" : ""}`} aria-label={`${voter.name} votes for ${candidate.name}`} aria-pressed={round.votes[voter.id] === candidate.id} onClick={() => onVote(voter.id, candidate.id)}>{candidate.name}{round.votes[voter.id] === candidate.id ? <Check size={16} aria-hidden="true" /> : null}</button>)}</div>
         </fieldset>)}
       </div>
-      <button type="button" disabled={!allVoted} onClick={onReveal} className="mt-6 w-full rounded-md bg-[#d5e467] action px-4 py-3 text-sm font-semibold text-[#18211f] disabled:cursor-not-allowed disabled:opacity-40">Reveal song owner</button>
+      <button type="button" disabled={!allVoted} onClick={onReveal} aria-describedby="reveal-help" className="button primary reveal-button">Reveal song owner <ArrowRight size={18} aria-hidden="true" /></button>
+      <p id="reveal-help" className="reveal-help">{allVoted ? "All guesses are in. Ready for the truth?" : `${game.players.length - voteCount} more ${game.players.length - voteCount === 1 ? "guess" : "guesses"} before the reveal.`}</p>
     </div>
     <ScoreStrip scores={scores} />
     <GameEndControl onEnd={onEnd} confirmEnd={confirmEnd} setConfirmEnd={setConfirmEnd} />
@@ -902,14 +804,46 @@ function ResultScreen({ game, round, owner, scores, onNext, onEnd, confirmEnd, s
   return <section className="game-screen result-screen">
     <div className="sheet result-sheet">
       <RoundStepper active="result" />
-      <p className="stage-kicker">Round result</p>
+      <p className="round-number">Round {game.activeRoundIndex + 1} / {game.rounds.length}</p>
       <div className={`result-stamp ${revealed ? "success" : "skipped"}`}>{revealed ? "REVEALED" : "SKIPPED"}</div>
       <h2 className="screen-title">{revealed ? `${owner?.name ?? "Someone"} brought this song.` : "No points this round."}</h2>
       <p className="screen-lede">{revealed ? "The room has its answer. Check the scores, then move to the next mystery track." : "Move on when the room is ready."}</p>
-      <button type="button" onClick={onNext} className="mt-6 w-full rounded-md bg-[#c7d2ed] action px-4 py-3 text-sm font-semibold text-[#18211f]">{game.activeRoundIndex + 1 === game.rounds.length ? "Show final standings" : "Next round"}</button>
+      {round.result?.kind === "revealed" ? <ul className="round-awards" aria-label="Points this round">{Object.entries(round.result.awards).map(([id, points]) => <li key={id}><span>{game.players.find((player) => player.id === id)?.name}</span><strong>+{points}</strong></li>)}</ul> : null}
+      <button type="button" onClick={onNext} className="button primary next-round-button">{game.activeRoundIndex + 1 === game.rounds.length ? "Show final standings" : "Next round"}</button>
     </div>
     <ScoreStrip scores={scores} />
     <GameEndControl onEnd={onEnd} confirmEnd={confirmEnd} setConfirmEnd={setConfirmEnd} />
+  </section>;
+}
+
+function GameFeedback({ error, message }: { error: string; message: string }) {
+  return <>{error ? <p role="alert" className="game-error game-feedback">{error}</p> : null}<p role="status" className="sr-only">{message}</p></>;
+}
+
+function FinalStandings({ game, scores, onNew }: { game: Game; scores: ScoreEntry[]; onNew: () => void }) {
+  const topScore = scores[0]?.score ?? 0;
+  const winners = topScore > 0 ? scores.filter((player) => player.score === topScore) : [];
+  const revealedCount = game.rounds.filter((round) => round.phase === "revealed").length;
+  return <section className="final-screen" aria-labelledby="final-title">
+    <div className="final-banner">
+      {winners.length > 0 ? <div className="confetti" aria-hidden="true">{Array.from({ length: 18 }, (_, index) => <i key={index} style={{ left: `${(index * 37) % 100}%`, animationDelay: `${(index % 6) * 90}ms` }} />)}</div> : null}
+      <div className="trophy-seal" aria-hidden="true"><Trophy size={48} /></div>
+      <h2 id="final-title">Final standings</h2>
+      <p className="winner-name">{winners.length ? winners.map((player) => player.name).join(" & ") : "An encore?"}</p>
+      <p className="winner-line">{winners.length ? `${winners.length === 1 ? "Takes the crown" : "Share the crown"}. ${topScore} points.` : "No points yet. The next playlist is waiting."}</p>
+      <div className="final-stamp">{game.endedEarly ? "Called it a night" : "That's a wrap"}</div>
+    </div>
+    <div className="final-ledger">
+      <div className="final-ledger-heading"><h3>The score sheet</h3><span>{revealedCount} / {game.rounds.length} rounds scored</span></div>
+      {game.endedEarly ? <p className="final-note">Game ended early. Only revealed rounds count.</p> : null}
+      <ol className="final-ranks">
+        {scores.map((player) => <li key={player.id} className={player.score > 0 && player.score === topScore ? "winner-row" : ""}>
+          <span className="final-rank" aria-label={`Rank ${scores.findIndex((entry) => entry.score === player.score) + 1}`}>{scores.findIndex((entry) => entry.score === player.score) + 1}</span>
+          <span className="final-player">{player.name}</span><strong>{player.score}<small>pts</small></strong>
+        </li>)}
+      </ol>
+      <button type="button" onClick={onNew} className="button primary">New game <ArrowRight size={20} aria-hidden="true" /></button>
+    </div>
   </section>;
 }
 
