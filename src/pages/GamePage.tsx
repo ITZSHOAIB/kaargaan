@@ -620,14 +620,17 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
   }
 
   return <>
-    {roomId ? <div className="setup-toolbar"><span>{lockedPlayerIds.length}/{players.length} entries locked in</span><button type="button" className="button" onClick={() => { stopImportScanner(); setShowRoom(!showRoom); }}>{showRoom ? "Back to setup" : "Room settings"}</button></div> : null}
+    {roomId ? <div className="setup-toolbar"><span>{lockedPlayerIds.length}/{players.length} entries locked in</span><button type="button" className="button" onClick={() => { stopImportScanner(); setShowRoom(!showRoom); }}>{showRoom ? "Back to setup" : "Manage room"}</button></div> : null}
     {saveError ? <p role="alert" className="game-error">{saveError}</p> : null}
     {showRoom ? <>
       <RoomSubheader roomId={roomId} />
       <section className="sheet room-manager">
-        <p className="round-marker">Host tools</p>
-        <h2>Room settings</h2>
-        <p className="room-manager-lede">Edit the rules or roster without creating a new room. The room ID stays the same.</p>
+        <div className="room-manager-header">
+          <div><p className="round-marker">Saved room · Host tools</p><h2>Manage this room</h2></div>
+          <button type="button" className="button" onClick={() => { setShowRoom(false); setError(""); }}>Return to setup</button>
+        </div>
+        <p className="room-manager-lede">Adjust the room, help someone rejoin, or collect a replacement entry. Your room ID stays the same.</p>
+        <div className="room-manager-section-title"><h3>Room settings</h3><span>Changes apply to the next invite</span></div>
         <div className="room-settings-form">
           <Field label="Theme" value={theme} onChange={setTheme} />
           <Field label="Host name" value={hostName} onChange={(value) => { setHostName(value); setPlayers(current => current.map((player, index) => index === 0 ? { ...player, name: value } : player)); }} />
@@ -636,13 +639,14 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
           <p className="room-settings-note">Changing songs or player count keeps this room ID, but collected entries need to be checked again.</p>
           <button type="button" className="button primary" onClick={applyRoomSettings}>Save room settings</button>
         </div>
+        <div className="room-manager-section-title"><h3>Invite players</h3><span>Everyone can join at once</span></div>
         <details className="room-invite-panel" open>
-          <summary>Share updated room invite</summary>
+          <summary>Show room QR and invite</summary>
           {roomQrDataUrl ? <img src={roomQrDataUrl} alt="Room invite QR code" className="room-invite-qr" /> : <p>Generating room QR…</p>}
           <button type="button" className="button primary" onClick={() => void copyRoomInvite()}><Copy size={16} aria-hidden="true" />Copy room invite</button>
           <details className="entry-paste"><summary>Show invite text</summary><textarea readOnly value={roomPayload} aria-label="Room invite payload" className="control" /></details>
         </details>
-        <h3 className="room-players-heading">Players</h3>
+        <div className="room-manager-section-title room-players-heading"><h3>Players</h3><span>Collect or replace submissions</span></div>
         <p className="room-rules">{theme} · {songCount} {songCount === 1 ? "song" : "songs"} each · {players.length} players</p>
         <ul className="room-player-list">
           {players.map((player, index) => <li key={player.id}><div><strong>{player.name}</strong><span>{lockedPlayerIds.includes(player.id) ? "Songs already collected. No need to resubmit." : "Waiting for songs"}</span></div><button type="button" className="button" onClick={() => {
