@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import QrScanner from "qr-scanner";
+import { qrScanRegion } from "../lib/qrScanRegion";
 import { ArrowRight, Check, Disc3, ScanLine, Trophy, Copy } from "lucide-react";
 import {
   beginVoting,
@@ -18,13 +19,13 @@ import { createRoomInvite, encodeRoomInvite, ENCRYPTED_SLIP_PREFIX, importEncryp
 import { normalizeYouTubeLink } from "../lib/youtube";
 import { RoomSubheader } from "../components/RoomBadge";
 import type { Game, Player, Round, Submission } from "../lib/types";
+import { conflictingSongNumbers, conflictMessage } from "../lib/songConflicts";
+import { HOST_DRAFT_KEY, loadHostDraft, saveDraft, useDraftStatus, type SetupPlayer, type SetupScreen } from "../lib/setupDraft";
 import { Select } from "../components/ui/Select";
 
 const qrScannerWorkerPath = new URL("qr-scanner/qr-scanner-worker.min.js", import.meta.url).toString();
 QrScanner.WORKER_PATH = qrScannerWorkerPath;
 
-type SetupPlayer = { id: string; name: string; links: string[] };
-type SetupScreen = "roster" | "invite" | "private" | "handoff" | "ready";
 
 const starter: SetupPlayer[] = [
   {
@@ -77,23 +78,31 @@ export function GamePage() {
 }
 
 function Setup({ onStart }: { onStart: (game: Game) => void }) {
-  const [theme, setTheme] = useState("Monsoon night");
-  const [songCount, setSongCount] = useState(3);
-  const [hostName, setHostName] = useState("Host");
-  const [playerCount, setPlayerCount] = useState(4);
-  const [players, setPlayers] = useState<SetupPlayer[]>(starter);
-  const [screen, setScreen] = useState<SetupScreen>("roster");
-  const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
-  const [pendingNextPlayerIndex, setPendingNextPlayerIndex] = useState<number | null>(null);
-  const [roomId, setRoomId] = useState("");
-  const [roomToken, setRoomToken] = useState("");
+  const [restored] = useState(loadHostDraft);
+  const [lockedPlayerIds, setLockedPlayerIds] = useState<string[]>(restored?.lockedPlayerIds ?? []);
+  const [showRoom, setShowRoom] = useState(false);
+  const saveError = useDraftStatus(HOST_DRAFT_KEY);
+  const [importing, setImporting] = useState(false);
+  const importRevision = useRef(0);
+  const [pendingEntry, setPendingEntry] = useState<SetupPlayer | null>(restored?.pendingEntry ?? null);
+  const [theme, setTheme] = useState(restored?.theme ?? "Monsoon night");
+  const [songCount, setSongCount] = useState(restored?.songCount ?? 3);
+  const [hostName, setHostName] = useState(restored?.hostName ?? "Host");
+  const [playerCount, setPlayerCount] = useState(restored?.playerCount ?? 4);
+  const [players, setPlayers] = useState<SetupPlayer[]>(restored?.players ?? starter);
+  const [screen, setScreen] = useState<SetupScreen>(restored?.screen ?? "roster");
+  const [currentPlayerIndex, setCurrentPlayerIndex] = useState(restored?.currentPlayerIndex ?? 0);
+  const [pendingNextPlayerIndex, setPendingNextPlayerIndex] = useState<number | null>(restored?.pendingNextPlayerIndex ?? null);
+  const [roomId, setRoomId] = useState(restored?.roomId ?? "");
+  const [roomToken, setRoomToken] = useState(restored?.roomToken ?? "");
   const [roomQrDataUrl, setRoomQrDataUrl] = useState("");
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("Set the roster, then hand the phone around one player at a time.");
+  const [message, setMessage] = useState(restored ? "Room setup restored. Continue collecting entries or share the same invite." : "Set the rules, then share the room invite.");
   const [importPayload, setImportPayload] = useState("");
-  const [importedPlayerId, setImportedPlayerId] = useState<string | null>(null);
+  const [importedPlayerId, setImportedPlayerId] = useState<string | null>(restored?.importedPlayerId ?? null);
   const [importError, setImportError] = useState("");
   const [importState, setImportState] = useState<"idle" | "scanning" | "blocked">("idle");
+  const importErrorRef = useRef<HTMLParagraphElement | null>(null);
   const importVideoRef = useRef<HTMLVideoElement | null>(null);
   const importScannerRef = useRef<QrScanner | null>(null);
 
@@ -105,7 +114,19 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
       window.scrollTo({ top: 0, behavior: "instant" });
     });
     return () => cancelAnimationFrame(frame);
-  }, [screen, currentPlayerIndex, importedPlayerId]);
+  }, [screen, currentPlayerIndex, importedPlayerId, showRoom]);
+
+  useEffect(() => {
+    if (!roomId) return;
+    saveDraft(HOST_DRAFT_KEY, { version: 1, theme, songCount, hostName, playerCount, players, lockedPlayerIds, screen, currentPlayerIndex, pendingNextPlayerIndex, roomId, roomToken, importedPlayerId, pendingEntry });
+  }, [theme, songCount, hostName, playerCount, players, lockedPlayerIds, screen, currentPlayerIndex, pendingNextPlayerIndex, roomId, roomToken, importedPlayerId, pendingEntry]);
+
+  useEffect(() => {
+    if (importError) {
+      importErrorRef.current?.focus({ preventScroll: true });
+      importErrorRef.current?.scrollIntoView({ block: "center", behavior: "instant" });
+    }
+  }, [importError]);
 
   const roomInvite = roomId && roomToken
     ? createRoomInvite({ roomId, roomToken, theme, songsPerPlayer: songCount, playerCount })
@@ -123,6 +144,7 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
   }
 
   function updateLink(playerIndex: number, linkIndex: number, value: string) {
+    setLockedPlayerIds(current => current.filter(id => id !== players[playerIndex].id));
     setPlayers((current) =>
       current.map((player, i) =>
         i === playerIndex
@@ -156,7 +178,7 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
   }
 
   function validatePlayerLinks(playerIndex: number) {
-    const player = players[playerIndex];
+    const player = playerIndex === currentPlayerIndex && pendingEntry ? pendingEntry : players[playerIndex];
     const seen = new Set<string>();
     const normalized = player.links.slice(0, songCount).map((link, songIndex) => {
       const check = normalizeYouTubeLink(link);
@@ -165,28 +187,15 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
       }
 
       if (seen.has(check.videoId)) {
-        throw new Error(`Use different songs for ${player.name || `Player ${playerIndex + 1}`}.`);
+        throw new Error(`${player.name}: Song ${songIndex + 1} repeats another song in this entry. Replace it before saving.`);
       }
 
       seen.add(check.videoId);
       return check.videoId;
     });
 
-    const priorIds = new Set(
-      players
-        .slice(0, playerIndex)
-        .flatMap((priorPlayer) => priorPlayer.links.slice(0, songCount))
-        .map((link) => {
-          const check = normalizeYouTubeLink(link);
-          return check.ok ? check.videoId : "";
-        })
-        .filter(Boolean)
-    );
-
-    const duplicate = normalized.find((videoId) => priorIds.has(videoId));
-    if (duplicate) {
-      throw new Error("One of these songs duplicates an earlier submission. Replace it with a different link.");
-    }
+    const conflicts = conflictingSongNumbers(player.links.slice(0, songCount), players.filter((other) => other.id !== player.id && lockedPlayerIds.includes(other.id)).flatMap((other) => other.links));
+    if (conflicts.length) throw new Error(conflictMessage(player.name, conflicts));
 
     return normalized;
   }
@@ -199,12 +208,17 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
       return;
     }
 
-    const nextIndex = currentPlayerIndex + 1;
-    if (nextIndex < players.length) {
+    const locked = [...new Set([...lockedPlayerIds, players[currentPlayerIndex].id])];
+    setLockedPlayerIds(locked);
+    if (pendingEntry) setPlayers(current => current.map(player => player.id === pendingEntry.id ? pendingEntry : player));
+    setPendingEntry(null);
+    setImportedPlayerId(null);
+    const nextIndex = players.findIndex((player) => !locked.includes(player.id));
+    if (nextIndex !== -1) {
       setPendingNextPlayerIndex(nextIndex);
       setImportedPlayerId(null);
       setScreen("handoff");
-      setMessage(`Saved ${players[currentPlayerIndex].name}. Ask ${players[nextIndex].name} to show their entry.`);
+      setMessage(`Saved ${pendingEntry?.name ?? players[currentPlayerIndex].name}. Ask ${players[nextIndex].name} to show their entry.`);
       setError("");
       return;
     }
@@ -226,7 +240,7 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
         }
 
         if (seen.has(check.videoId)) {
-          throw new Error("Replace duplicate songs before starting.");
+          throw new Error(`${player.name}: Song ${songIndex + 1} repeats a song in this room. Replace that entry before starting.`);
         }
 
         seen.add(check.videoId);
@@ -241,9 +255,23 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
     return submissions;
   }
 
-  function applyImportedSlip(payload: string) {
-    const result = importSongSlip(payload, songCount);
-    return applyImportedResult(result);
+  async function importEntry(payload: string) {
+    stopImportScanner();
+    const request = ++importRevision.current;
+    setImporting(true);
+    setImportError("");
+    try {
+      const clean = payload.trim();
+      const result = clean.startsWith(ENCRYPTED_SLIP_PREFIX)
+        ? await importEncryptedSongSlip(clean, `${roomId}:${roomToken}`, songCount)
+        : importSongSlip(clean, songCount);
+      if (request !== importRevision.current) return;
+      applyImportedResult(result);
+    } catch {
+      if (request === importRevision.current) setImportError("Could not read this entry. Ask the player to generate a fresh QR or code.");
+    } finally {
+      if (request === importRevision.current) setImporting(false);
+    }
   }
 
   async function copyRoomInvite() {
@@ -253,11 +281,6 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
     } catch {
       setMessage("Copy is unavailable here. Open the invite text below and copy it manually.");
     }
-  }
-
-  async function applyEncryptedSlip(payload: string) {
-    const result = await importEncryptedSongSlip(payload, `${roomId}:${roomToken}`, songCount);
-    return applyImportedResult(result);
   }
 
   function applyImportedResult(result: ReturnType<typeof importSongSlip>) {
@@ -271,26 +294,13 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
       return false;
     }
 
-    const priorIds = new Set(
-      players
-        .slice(0, currentPlayerIndex)
-        .flatMap((player) => player.links)
-        .map((link) => normalizeYouTubeLink(link))
-        .filter((check): check is { ok: true; videoId: string; canonicalUrl: string; sourceUrl: string } => check.ok)
-        .map((check) => check.videoId)
-    );
-    const repeated = result.links.find((link) => {
-      const check = normalizeYouTubeLink(link);
-      return check.ok && priorIds.has(check.videoId);
-    });
-    if (repeated) {
-      setImportError("That submission repeats a song already used in this room. Ask the player to replace it, then show a new QR.");
+    const conflicts = conflictingSongNumbers(result.links, players.filter((player) => player.id !== players[currentPlayerIndex].id && lockedPlayerIds.includes(player.id)).flatMap((player) => player.links));
+    if (conflicts.length) {
+      setImportError(conflictMessage(result.playerName, conflicts));
       return false;
     }
 
-    setPlayers((current) =>
-      current.map((player, index) => (index === currentPlayerIndex ? { ...player, name: index === 0 ? player.name : result.playerName, links: result.links } : player))
-    );
+    setPendingEntry({ ...players[currentPlayerIndex], name: currentPlayerIndex === 0 ? players[0].name : result.playerName, links: result.links });
     stopImportScanner();
     setImportPayload("");
     setImportedPlayerId(players[currentPlayerIndex].id);
@@ -316,19 +326,22 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
         Math.random,
         roomId
       );
-      onStart(saveCurrentGame(game));
+      const saved = saveCurrentGame(game);
+      localStorage.removeItem(HOST_DRAFT_KEY);
+      onStart(saved);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Unable to start the game.");
       setScreen("private");
     }
   }
 
-  const currentPlayer = players[currentPlayerIndex];
+  const currentPlayer = pendingEntry ?? players[currentPlayerIndex];
   const nextPlayer = pendingNextPlayerIndex !== null ? players[pendingNextPlayerIndex] : null;
   const isHostSlot = currentPlayerIndex === 0;
 
   useEffect(() => {
     return () => {
+      importRevision.current += 1;
       importScannerRef.current?.destroy();
       importScannerRef.current = null;
     };
@@ -336,13 +349,14 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
 
   useEffect(() => {
     let active = true;
-    if (screen !== "invite" || !roomPayload) return;
+    if ((screen !== "invite" && !showRoom) || !roomPayload) return;
     QRCode.toDataURL(roomPayload, { errorCorrectionLevel: "M", margin: 1, scale: 8 })
       .then((dataUrl: string) => { if (active) setRoomQrDataUrl(dataUrl); })
       .catch(() => { if (active) setRoomQrDataUrl(""); });
     return () => { active = false; };
-  }, [roomPayload, screen]);
+  }, [roomPayload, screen, showRoom]);
 
+  function renderSetup() {
   if (screen === "invite") {
     return (
       <>
@@ -351,7 +365,7 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
         <p className="round-marker">Host · Step 2 of 4</p>
         <h2 className="mt-2 text-3xl font-semibold text-[#18211f]">Everyone: scan this room QR</h2>
         <p className="mt-3 text-sm leading-7 text-[#18211f]">
-          Keep this screen open while every player scans it on their own phone. It shares the theme and songs-per-player setting.
+          Everyone can scan at once. Need this QR later? Open Room & players from any setup step.
         </p>
         {roomQrDataUrl ? <img src={roomQrDataUrl} alt="Room invite QR code" className="mx-auto mt-6 h-64 w-64 rounded-md bg-white p-3" /> : <div className="mx-auto mt-6 flex h-64 w-64 items-center justify-center rounded-md bg-[#e2e9bb] text-sm text-[#536056]">Generating room QR…</div>}
         <p className="mt-5 text-center text-sm text-[#536056]">Players should scan this QR from the Player setup screen.</p>
@@ -478,27 +492,27 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
             <button type="button" onClick={lockCurrentPlayer} className="button primary">Confirm player submission <Check size={18} aria-hidden="true" /></button>
             <button type="button" className="button" onClick={() => {
               stopImportScanner();
-              setPlayers((current) => current.map((player, index) => index === currentPlayerIndex ? { ...player, name: `Player ${index + 1}`, links: Array.from({ length: songCount }, () => "") } : player));
+              setPendingEntry(null);
               setImportedPlayerId(null); setImportPayload(""); setImportError(""); setError("");
             }}>Discard and scan again</button>
           </div> : <div className="collection-scanner">
-            <div className="scan-prompt" aria-hidden="true"><ScanLine size={48} /><span>Their phone. Your scanner.</span></div>
+            <div className="scan-prompt" aria-hidden="true"><ScanLine size={48} /><span>{importError ? "Replace only the listed songs." : "Their phone. Your scanner."}</span></div>
+            {importError ? <p ref={importErrorRef} tabIndex={-1} role="alert" className="game-error">{importError}</p> : null}
             <video ref={importVideoRef} className={`qr-camera ${importState === "scanning" ? "" : "qr-camera-idle"}`} muted playsInline />
             <button type="button" onClick={() => void startImportScanner()} className="button primary"><ScanLine size={20} aria-hidden="true" />Scan {currentPlayer.name} QR</button>
             {importState === "scanning" ? <button type="button" onClick={stopImportScanner} className="button">Stop scan</button> : null}
             <details className="entry-paste">
               <summary>Paste encrypted entry instead</summary>
-              <textarea aria-label="Paste the encrypted entry from Discord" value={importPayload} onChange={(event) => setImportPayload(event.target.value)} placeholder="Paste the encrypted entry from Discord" className="control" />
-              <button type="button" onClick={() => { if (importPayload.startsWith(ENCRYPTED_SLIP_PREFIX)) void applyEncryptedSlip(importPayload); else applyImportedSlip(importPayload); }} className="button primary">Import entry</button>
+              <textarea aria-label="Paste the encrypted entry from Discord" value={importPayload} onChange={(event) => { importRevision.current += 1; setImporting(false); setImportError(""); setImportPayload(event.target.value); }} placeholder="Paste the encrypted entry from Discord" className="control" />
+              <button type="button" disabled={importing} onClick={() => void importEntry(importPayload)} className="button primary">{importing ? "Checking entry…" : "Import entry"}</button>
             </details>
-            {importError ? <p role="alert" className="game-error">{importError}</p> : null}
             {importState === "scanning" ? <p role="status">Hold the QR inside the square.</p> : null}
           </div>}
           {error ? <p role="alert" className="game-error">{error}</p> : null}
         </div>
         <div className="collection-footer">
-          <button type="button" onClick={() => { stopImportScanner(); setScreen("roster"); }} className="button">Back to roster</button>
-          <span>{currentPlayerIndex} of {players.length} players locked in</span>
+          <button type="button" onClick={() => { stopImportScanner(); setShowRoom(true); }} className="button">Back to roster</button>
+          <span>{lockedPlayerIds.length} of {players.length} players locked in</span>
         </div>
       </section>
     </>;
@@ -552,6 +566,9 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
             links: Array.from({ length: songCount }, () => "")
           }));
           setPlayers(nextPlayers);
+          setPendingEntry(null);
+          setLockedPlayerIds([]);
+          setImportedPlayerId(null);
           setRoomId(crypto.randomUUID());
           setRoomToken(crypto.randomUUID());
           setCurrentPlayerIndex(0);
@@ -569,6 +586,37 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
     </>
   );
 
+  }
+
+  return <>
+    {roomId ? <div className="setup-toolbar"><span>{lockedPlayerIds.length}/{players.length} entries locked in</span><button type="button" className="button" onClick={() => { stopImportScanner(); setShowRoom(!showRoom); }}>{showRoom ? "Back to setup" : "Room & players"}</button></div> : null}
+    {saveError ? <p role="alert" className="game-error">{saveError}</p> : null}
+    {showRoom ? <>
+      <RoomSubheader roomId={roomId} />
+      <section className="sheet room-manager">
+        <h2>Room & players</h2>
+        <p className="room-manager-lede">Someone needs to rejoin? Share this same invite. Collected songs stay safe.</p>
+        <details className="room-invite-panel" open>
+          <summary>Share room invite</summary>
+          {roomQrDataUrl ? <img src={roomQrDataUrl} alt="Room invite QR code" className="room-invite-qr" /> : <p>Generating room QR…</p>}
+          <button type="button" className="button primary" onClick={() => void copyRoomInvite()}><Copy size={16} aria-hidden="true" />Copy room invite</button>
+          <details className="entry-paste"><summary>Show invite text</summary><textarea readOnly value={roomPayload} aria-label="Room invite payload" className="control" /></details>
+        </details>
+        <p className="room-rules">{theme} · {songCount} {songCount === 1 ? "song" : "songs"} each · {players.length} players</p>
+        <ul className="room-player-list">
+          {players.map((player, index) => <li key={player.id}><div><strong>{player.name}</strong><span>{lockedPlayerIds.includes(player.id) ? "Songs already collected. No need to resubmit." : "Waiting for songs"}</span></div><button type="button" className="button" onClick={() => {
+            stopImportScanner(); setPendingEntry(null);
+            setCurrentPlayerIndex(index); setPendingNextPlayerIndex(null); setImportedPlayerId(null); setImportPayload(""); setImportError(""); setError(""); setScreen("private"); setShowRoom(false);
+          }}>{lockedPlayerIds.includes(player.id) ? `Replace ${player.name} entry` : `Collect ${player.name} entry`}</button></li>)}
+        </ul>
+        <p role="status" className="room-manager-lede">{message}</p>
+        <details className="new-room-control"><summary>Start over with a new room</summary><p>This clears this host's setup and all collected entries. Everyone will need the new invite.</p><button type="button" className="button" onClick={() => {
+          stopImportScanner(); localStorage.removeItem(HOST_DRAFT_KEY); setPendingEntry(null); setImportedPlayerId(null); setLockedPlayerIds([]); setRoomId(""); setRoomToken(""); setRoomQrDataUrl(""); setCurrentPlayerIndex(0); setPendingNextPlayerIndex(null); setPlayers(starter); setScreen("roster"); setShowRoom(false); setError(""); setMessage("Set the room rules, then share the new invite.");
+        }}>Clear setup and start new room</button></details>
+      </section>
+    </> : renderSetup()}
+  </>;
+
   async function startImportScanner() {
     if (!importVideoRef.current) {
       setImportError("Camera preview is not ready yet.");
@@ -583,15 +631,11 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
         const scanner = new QrScanner(
         importVideoRef.current,
         (result) => {
-          const imported = result.data.startsWith(ENCRYPTED_SLIP_PREFIX)
-            ? applyEncryptedSlip(result.data)
-            : Promise.resolve(applyImportedSlip(result.data));
-          void imported.then((accepted) => {
-            if (accepted) stopImportScanner();
-          });
+          if (importScannerRef.current !== scanner) return;
+          void importEntry(result.data);
         },
         {
-          highlightScanRegion: true,
+          highlightScanRegion: true, calculateScanRegion: qrScanRegion,
           preferredCamera: "environment"
         }
       );
@@ -604,6 +648,8 @@ function Setup({ onStart }: { onStart: (game: Game) => void }) {
   }
 
   function stopImportScanner() {
+    importRevision.current += 1;
+    setImporting(false);
     importScannerRef.current?.stop();
     importScannerRef.current?.destroy();
     importScannerRef.current = null;

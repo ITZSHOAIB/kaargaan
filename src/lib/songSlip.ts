@@ -120,7 +120,8 @@ export function decodeSongSlip(payload: string): { ok: true; slip: SongSlip } | 
       return { ok: false, error: "Imported slips must contain 1 to 5 songs." };
     }
     if (new Set(parsed.videoIds).size !== parsed.videoIds.length) {
-      return { ok: false, error: "Duplicate songs are not allowed inside one slip." };
+      const positions = parsed.videoIds.flatMap((id, index, ids) => ids.filter(other => other === id).length > 1 ? [index + 1] : []);
+      return { ok: false, error: `Songs ${positions.join(", ")} repeat within this entry. Keep one copy of each song, replace the others, and generate a fresh QR or code.` };
     }
     if (parsed.videoIds.some((id) => !/^[A-Za-z0-9_-]{11}$/.test(id))) {
       return { ok: false, error: "The slip contains an invalid video id." };
@@ -145,11 +146,11 @@ export function decodeRoomInvite(payload: string): { ok: true; invite: RoomInvit
     if (
       parsed.format !== "kaargaan-room-invite" ||
       parsed.version !== 1 ||
-      typeof parsed.roomId !== "string" ||
-      typeof parsed.roomToken !== "string" ||
+      typeof parsed.roomId !== "string" || !parsed.roomId.trim() ||
+      typeof parsed.roomToken !== "string" || !parsed.roomToken.trim() ||
       typeof parsed.theme !== "string" ||
-      !Number.isInteger(parsed.songsPerPlayer) ||
-      !Number.isInteger(parsed.playerCount)
+      !Number.isInteger(parsed.songsPerPlayer) || Number(parsed.songsPerPlayer) < 1 || Number(parsed.songsPerPlayer) > 5 ||
+      !Number.isInteger(parsed.playerCount) || Number(parsed.playerCount) < 3 || Number(parsed.playerCount) > 10
     ) {
       return { ok: false, error: "This QR is not a KaarGaan room invite." };
     }

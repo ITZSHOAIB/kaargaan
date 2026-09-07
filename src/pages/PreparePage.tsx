@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import QrScanner from "qr-scanner";
+import { qrScanRegion } from "../lib/qrScanRegion";
 import { AlertCircle, Check, Copy, Download, ScanLine, Video } from "lucide-react";
 import { createSongSlip, decodeRoomInvite, encodeEncryptedSongSlip } from "../lib/songSlip";
 import { normalizeYouTubeLink } from "../lib/youtube";
 import { RoomSubheader } from "../components/RoomBadge";
+import { loadPlayerDraft, PLAYER_DRAFT_KEY, saveDraft, useDraftStatus } from "../lib/setupDraft";
 import type { RoomInvite } from "../lib/types";
 
 type LinkRow = { value: string };
@@ -12,18 +14,35 @@ const qrScannerWorkerPath = new URL("qr-scanner/qr-scanner-worker.min.js", impor
 QrScanner.WORKER_PATH = qrScannerWorkerPath;
 
 export function PreparePage() {
-  const [playerName, setPlayerName] = useState("");
-  const [theme, setTheme] = useState("");
-  const [links, setLinks] = useState<LinkRow[]>([]);
-  const [invite, setInvite] = useState<RoomInvite | null>(null);
+  const [restored] = useState(loadPlayerDraft);
+  const [playerName, setPlayerName] = useState(restored?.playerName ?? "");
+  const [theme, setTheme] = useState(restored?.invite.theme ?? "");
+  const [links, setLinks] = useState<LinkRow[]>(restored?.links ?? []);
+  const [invite, setInvite] = useState<RoomInvite | null>(restored?.invite ?? null);
   const [invitePayload, setInvitePayload] = useState("");
   const [inviteError, setInviteError] = useState("");
   const [inviteState, setInviteState] = useState<"idle" | "scanning">("idle");
   const [generatedSlip, setGeneratedSlip] = useState<string>("");
-  const [message, setMessage] = useState("Scan the room QR to get the song count.");
+  const [message, setMessage] = useState(restored ? "Songs restored. Generate a fresh QR or code when ready." : "Scan the room QR to get the song count.");
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
+  const generation = useRef(0);
+  const [generating, setGenerating] = useState(false);
+  const [changingRoom, setChangingRoom] = useState(false);
+  const saveError = useDraftStatus(PLAYER_DRAFT_KEY);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const scannerRef = useRef<QrScanner | null>(null);
+
+  useEffect(() => {
+    if (invite) saveDraft(PLAYER_DRAFT_KEY, { version: 1, invite, playerName, links });
+  }, [invite, playerName, links]);
+
+  function invalidateEntry() {
+    generation.current += 1;
+    setGeneratedSlip("");
+    setQrDataUrl("");
+    setGenerating(false);
+    setMessage("Entry changed. Generate a fresh QR or code before sharing.");
+  }
 
   const normalizedLinks = useMemo(
     () =>
@@ -87,6 +106,7 @@ export function PreparePage() {
   }, [generatedSlip]);
 
   useEffect(() => () => {
+    generation.current += 1;
     scannerRef.current?.destroy();
     scannerRef.current = null;
   }, []);
@@ -97,9 +117,12 @@ export function PreparePage() {
       setInviteError(result.error);
       return false;
     }
+    invalidateEntry();
+    const sameRoom = invite?.roomId === result.invite.roomId && invite?.roomToken === result.invite.roomToken && invite?.songsPerPlayer === result.invite.songsPerPlayer;
+    setChangingRoom(false);
     setInvite(result.invite);
     setTheme(result.invite.theme);
-    setLinks(Array.from({ length: result.invite.songsPerPlayer }, () => ({ value: "" })));
+    if (!sameRoom) setLinks(Array.from({ length: result.invite.songsPerPlayer }, () => ({ value: "" })));
     setInvitePayload("");
     setInviteError("");
     setMessage(`Room ready. Add ${result.invite.songsPerPlayer} different songs, then show your QR to the host.`);
@@ -115,8 +138,10 @@ export function PreparePage() {
     }
   }
 
-  if (!invite) {
+  if (!invite || changingRoom) {
     return (
+      <>
+      {invite ? <RoomSubheader roomId={invite.roomId} /> : null}
       <section className="mx-auto max-w-xl sheet player-join">
         <p className="round-marker">Player · Step 1 of 2</p>
         <div className="mt-2 flex items-start gap-4">
@@ -152,8 +177,10 @@ export function PreparePage() {
           <textarea value={invitePayload} onChange={(event) => setInvitePayload(event.target.value)} placeholder="Paste the room invite payload" className="mt-3 min-h-28 w-full rounded-md border border-[#7b846f] bg-[#faf8f0] p-3 text-sm text-[#18211f]" />
           <button type="button" onClick={() => acceptInvite(invitePayload)} className="mt-3 rounded-md border border-[#7b846f] bg-[#faf8f0] px-4 py-2 text-sm text-[#18211f]">Use invite</button>
         </details>
-        {inviteError ? <p className="mt-3 text-sm text-[#922c22]">{inviteError}</p> : null}
+        {inviteError ? <p role="alert" className="mt-3 text-sm text-[#922c22]">{inviteError}</p> : null}
+        {invite ? <button type="button" className="button mt-4" onClick={() => { stopInviteScanner(); setChangingRoom(false); }}>Back to my songs</button> : null}
       </section>
+      </>
     );
   }
 
@@ -162,6 +189,8 @@ export function PreparePage() {
     <RoomSubheader roomId={invite.roomId} />
     <section className="mx-auto max-w-2xl">
       <div className="sheet">
+        {saveError ? <p role="alert" className="game-error">{saveError}</p> : null}
+        <div className="player-room-tools"><span>{restored ? "Your songs are restored on this phone." : "Your progress stays on this phone."}</span><button type="button" className="button" onClick={() => setChangingRoom(true)}>Join another room</button></div>
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="round-marker">Player · Step 2 of 2</p>
@@ -180,7 +209,7 @@ export function PreparePage() {
         </div>
 
         <div className="mt-7 space-y-3">
-          <Field label="Your name" value={playerName} onChange={setPlayerName} />
+          <Field label="Your name" value={playerName} onChange={(value) => { invalidateEntry(); setPlayerName(value); }} />
           <div className="flex items-center justify-between gap-3">
             <h3 className="text-sm font-semibold uppercase tracking-normal text-[#18211f]">Your songs</h3>
             <span className="text-xs text-[#536056]">{normalizedLinks.filter(Boolean).length}/{invite.songsPerPlayer} ready</span>
@@ -195,9 +224,10 @@ export function PreparePage() {
                 <input
                   id={`song-${index}`}
                   value={link.value}
-                  onChange={(event) =>
-                    setLinks((current) => current.map((item, itemIndex) => (itemIndex === index ? { value: event.target.value } : item)))
-                  }
+                  onChange={(event) => {
+                    invalidateEntry();
+                    setLinks((current) => current.map((item, itemIndex) => (itemIndex === index ? { value: event.target.value } : item)));
+                  }}
                   placeholder="Paste a YouTube or YouTube Music link"
                   className="control"
                 />
@@ -213,6 +243,9 @@ export function PreparePage() {
           <button
             type="button"
             onClick={async () => {
+              invalidateEntry();
+              const request = generation.current;
+              setGenerating(true);
               const result = createSongSlip({
                 playerName,
                 theme,
@@ -222,27 +255,32 @@ export function PreparePage() {
                 songsPerPlayer: invite.songsPerPlayer
               });
               if (!result.ok) {
+                setGenerating(false);
                 setMessage(result.error);
                 setGeneratedSlip("");
                 return;
               }
               try {
                 const encoded = await encodeEncryptedSongSlip(result.slip, `${invite.roomId}:${invite.roomToken}`);
+                if (request !== generation.current) return;
                 setGeneratedSlip(encoded);
                 setQrDataUrl("");
                 setMessage(`Created an encrypted ${result.slip.videoIds.length}-song entry for ${result.slip.playerName}.`);
               } catch (caught) {
+                if (request !== generation.current) return;
                 setGeneratedSlip("");
                 setMessage(caught instanceof Error ? caught.message : "Unable to encrypt the song entry.");
+              } finally {
+                if (request === generation.current) setGenerating(false);
               }
             }}
-            disabled={!canGenerate}
+            disabled={!canGenerate || generating}
             className="inline-flex items-center gap-2 rounded-md bg-[#ef7657] action px-5 py-3 text-sm font-medium text-[#18211f] transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-45"
           >
             <Download className="h-4 w-4" />
-            Generate submission QR
+            {generating ? "Generating fresh entry…" : "Generate submission QR"}
           </button>
-          <span className="self-center text-sm text-[#536056]">{message}</span>
+          <span role="status" className="self-center text-sm text-[#536056]">{message}</span>
         </div>
         {!canGenerate ? <p className="mt-3 text-xs text-[#536056]">Add your name and {invite.songsPerPlayer} different YouTube links to continue.</p> : null}
 
@@ -293,7 +331,7 @@ export function PreparePage() {
     try {
       const scanner = new QrScanner(videoRef.current, (result) => {
         if (acceptInvite(result.data)) stopInviteScanner();
-      }, { highlightScanRegion: true, preferredCamera: "environment" });
+      }, { highlightScanRegion: true, calculateScanRegion: qrScanRegion, preferredCamera: "environment" });
       scannerRef.current = scanner;
       await scanner.start();
     } catch (caught) {

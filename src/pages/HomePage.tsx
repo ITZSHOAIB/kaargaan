@@ -1,15 +1,21 @@
 import { ArrowUpRight, Disc3, Users, UserRound } from "lucide-react";
 import { Link } from "react-router-dom";
+import { loadHostDraft, loadPlayerDraft } from "../lib/setupDraft";
+import { roomCode } from "../lib/room";
 import { loadCurrentGameState } from "../lib/gamePersistence";
 
 export function HomePage() {
   const savedGame = loadCurrentGameState().game;
+  const hostDraft = loadHostDraft();
+  const playerDraft = loadPlayerDraft();
   const hasActiveGame = savedGame?.status === "playing";
 
   return <div className="home-layout">
     <section className="invitation">
       <h2>Your songs.<br/>Their guesses.<br/><em>Keep a straight face.</em></h2>
       <p>One person hosts the room. Everyone else adds songs privately, then the room guesses who picked each track.</p>
+      {!savedGame && hostDraft ? <div className="resume-banner"><div><strong>Room setup saved</strong><span>Room {roomCode(hostDraft.roomId)} · {hostDraft.lockedPlayerIds.length}/{hostDraft.playerCount} entries collected</span></div><Link className="button" to="/host">Continue room setup</Link></div> : null}
+      {playerDraft ? <div className="resume-banner"><div><strong>Your songs are saved</strong><span>Room {roomCode(playerDraft.invite.roomId)}</span></div><Link className="button" to="/player">Return to my songs</Link></div> : null}
       <div className="role-choice" aria-label="Choose your role">
         <Link className="role-option role-option-primary" to="/host">
           <span className="role-icon"><Users size={21} aria-hidden="true" /></span>

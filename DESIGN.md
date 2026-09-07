@@ -11,7 +11,9 @@ The accepted direction is retro tabletop with bold neubrutalism. See
 - Sticky brand header with a compact room ID at the right, mounted by the current host or player screen. Every post-creation/join step includes it.
 - Crisp sheet borders, modest corner radii, and a small offset shadow on the home primary action.
 - Listening, voting, and reveal are separate steps. Desktop places the live score sheet beside the active step; phones place it below.
-- Collection is a centered single column on every device. Accepted entries replace scanning with confirmation and a discard action.
+- Collection is a centered single column on every device. Accepted entries replace scanning with confirmation and a discard action. Numbered conflict errors move into view and identify only the incoming song positions.
+- Room & players reopens the original invite and collected roster from every host setup step. Local host/player drafts restore independently; replacements are pending until confirmed.
+- Any player edit immediately hides the old generated QR and code; only the latest generation can become shareable. The camera scan region matches the visible square.
 - Final standings use a lime winner banner, trophy seal, real tied ranks, and a short confetti burst. Zero-point games do not crown a winner.
 - Motion is finite and decorative, with reduced-motion support. Step changes restore focus and scroll to the current heading.
 - Focus outlines, native selects, readable input text, and text labels alongside navigation icons.
@@ -23,4 +25,4 @@ that reinterpret unrelated Tailwind color classes. Extend the explicit sheet and
 
 Chromium checks cover 320px, 390px, 768px, and 1280px layouts, import/confirm/discard, room identity, voting, reveal, and reload recovery. Rendered text contrast is measured against its surface, including disabled controls. YouTube is
 stubbed in the browser test; real mobile playback and camera behavior still require device checks.
-Private setup handoffs and comprehensive save validation remain separate functional work.
+Recovery tests cover corrected encrypted-code and QR imports, generation races, draft validation, reloads, and replacing collected entries.
