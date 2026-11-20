@@ -2,9 +2,11 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { cleanName, MAX_NAME_LENGTH, plural } from "../../lib/card";
 import { loadCurrentGameState } from "../../lib/gamePersistence";
+import { cue } from "../../lib/sfx";
 import { loadCrew, loadSetup, saveSetup, type StageSetup } from "../../lib/stageStore";
 
 const LENGTHS = [2, 3];
+const THEME_IDEAS = ["Songs on repeat", "Guilty pleasures", "School-day favourites", "Road trip anthems", "Heartbreak hits", "Wedding dance floor"];
 
 function initialSetup(): StageSetup {
   const crew = loadCrew();
@@ -45,6 +47,10 @@ export function SetupScreen({ onOpen }: { onOpen: (setup: StageSetup) => void })
         <span className="kg-label">Theme</span>
         <input className="kg-input" value={setup.theme} maxLength={60} placeholder="Songs on repeat" onChange={(e) => change({ theme: e.target.value })} />
       </label>
+      <div className="kg-ideas" role="group" aria-label="Theme ideas">
+        {THEME_IDEAS.map((idea) => <button key={idea} type="button" className="kg-idea" aria-pressed={setup.theme.trim() === idea}
+          onClick={() => { change({ theme: idea }); cue("tap"); }}>{idea}</button>)}
+      </div>
       <fieldset className="kg-choice">
         <legend className="kg-label">Songs each</legend>
         <div className="kg-choice-options">

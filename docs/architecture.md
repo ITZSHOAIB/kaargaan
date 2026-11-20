@@ -2,7 +2,7 @@
 
 ## Shape
 
-KaarGaan is a static React 19 + TypeScript + Vite PWA that runs entirely in the browser. It uses React Router for its four screens, plain CSS (`src/styles/buzzer.css`), `vite-plugin-pwa` for the app shell, `qrcode` / `qr-scanner` for QR codes, and the official YouTube iframe API for playback. It has no server code, accounts or remote state.
+KaarGaan is a static React 19 + TypeScript + Vite PWA that runs entirely in the browser. It uses React Router for its four screens (home loads first; the others are lazy chunks, preloaded when the phone is idle and precached for offline use), plain CSS (`src/styles/buzzer.css`), `vite-plugin-pwa` for the app shell, `qrcode` / `qr-scanner` for QR codes, and the official YouTube iframe API for playback. It has no server code, accounts or remote state.
 
 ```mermaid
 flowchart LR
@@ -29,6 +29,7 @@ Links travel over whatever the group already uses (share sheet, chat, QR). Nothi
   - The iframe API loads once, and each game creates one player; each round cues its video.
   - Player events only report problems. They never award points, reveal owners or advance a round. The one exception is an unplayable song, which skips its own round while voting is open.
   - A wake lock keeps the screen on while a game is playing.
+- **Feel** (`sfx.ts`, `motionFeatures.ts`, `ui/StageBackdrop.tsx`): synthesised sounds and buzzes behind one switch, the lazily loaded `motion` engine, and the decorative stage. None of it reads game state that isn't already on screen.
 - **Screens** (`src/pages/{card,stage,play}`, `HomePage.tsx`) and shared UI (`src/ui`). They only ever render what the current phase needs. Owner ids, player ids and the future queue never reach the DOM before a reveal.
 
 ## Privacy boundary

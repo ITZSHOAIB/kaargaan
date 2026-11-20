@@ -101,7 +101,7 @@ body:has(.kg-app) { background: var(--kg-blue); }
   border: var(--kg-border); border-radius: var(--kg-radius); box-shadow: var(--kg-lift);
   background: var(--kg-white); color: var(--kg-navy);
   font: 800 18px/1.1 var(--kg-font); text-align: center; text-decoration: none; cursor: pointer;
-  transition: transform .08s ease, box-shadow .08s ease;
+  transition: transform .08s ease;
 }
 .kg-btn:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 1px 0 var(--kg-navy); }
 .kg-btn--wide { width: 100%; }
@@ -217,7 +217,7 @@ body:has(.kg-app) { background: var(--kg-blue); }
 .kg-dock-controls { display: flex; gap: 10px; }
 .kg-dock-controls .kg-btn--wide { flex: 1; width: auto; }
 .kg-progress { height: 10px; border-radius: 999px; background: var(--kg-blue-raised); overflow: hidden; }
-.kg-progress span { display: block; height: 100%; background: var(--kg-yellow); transition: width .5s linear; }
+.kg-progress span { display: block; height: 100%; background: var(--kg-yellow); transform-origin: left center; transition: transform .5s linear; }
 .kg-dock .kg-small:empty { display: none; }
 
 /* Play: vote tiles. Colours follow seat order in CSS so every tile's markup is the same. */
@@ -225,6 +225,7 @@ body:has(.kg-app) { background: var(--kg-blue); }
 .kg-votes-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .kg-tiles { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
 .kg-tile { box-sizing: border-box; width: 100%; min-height: 112px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 12px; border: var(--kg-border); border-radius: var(--kg-radius); background: var(--kg-white); color: var(--kg-navy); box-shadow: var(--kg-lift); font: inherit; text-align: left; cursor: pointer; }
+.kg-tile { transition: transform .08s ease; }
 .kg-tile:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--kg-navy); }
 .kg-tile-name { font-weight: 800; font-size: 19px; line-height: 1.1; overflow-wrap: anywhere; }
 .kg-tile-state { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; font-size: 14px; color: var(--kg-on-white-muted); }
@@ -278,6 +279,7 @@ body:has(.kg-app) { background: var(--kg-blue); }
   .kg-progress span { transition: none; }
 }
 @media (forced-colors: active) {
+  .kg-stage-bg { display: none; }
   .kg-btn, .kg-panel, .kg-input, .kg-sealed, .kg-notice, .kg-choice-option span, .kg-pill, .kg-tile, .kg-sheet, .kg-reveal, .kg-dock { border-color: CanvasText; }
   .kg-progress span { background: Highlight; }
   .kg-choice-option input:checked + span { outline: 3px solid Highlight; }
@@ -286,3 +288,34 @@ body:has(.kg-app) { background: var(--kg-blue); }
 
 /* App update offer: sits above every screen, never during a round. */
 .kg-update { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px; padding: 10px 16px; background: var(--kg-navy); color: var(--kg-white); font: 700 16px/1.3 var(--kg-font); }
+
+/* Stage backdrop: decoration only. Transforms and opacity only, so it never costs a layout. */
+.kg-app { position: relative; isolation: isolate; }
+.kg-top, .kg-main, .kg-update { position: relative; z-index: 1; }
+.kg-top-actions { display: flex; align-items: center; gap: 8px; }
+.kg-sound { background: transparent; color: var(--kg-white); border-color: var(--kg-on-blue-line); }
+.kg-sound[aria-pressed="true"] { background: var(--kg-blue-raised); }
+.kg-stage-bg { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; contain: strict; transition: opacity .6s ease; }
+.kg-stage-bg[data-calm] { opacity: .45; }
+.kg-stage-bg[data-calm] *, .kg-stage-bg[data-paused] * { animation-play-state: paused; }
+.kg-stage-spot { position: absolute; left: 50%; top: -30vh; width: 140vw; height: 90vh; translate: -50% 0; background: radial-gradient(closest-side, rgb(255 255 255 / .13), transparent); animation: kg-spot 9s ease-in-out infinite alternate; }
+.kg-stage-note { position: absolute; fill: rgb(255 255 255 / .16); animation: kg-drift 12s ease-in-out infinite; will-change: transform; }
+.kg-stage-note:nth-of-type(3n) { fill: rgb(255 210 63 / .28); }
+.kg-stage-note:nth-of-type(3n+1) { fill: rgb(255 79 139 / .24); }
+.kg-stage-spark { position: absolute; width: 10px; height: 10px; background: var(--kg-yellow); clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); animation: kg-twinkle 2.8s ease-in-out infinite; }
+.kg-stage-eq { position: absolute; left: 0; right: 0; bottom: 0; height: 90px; display: flex; align-items: flex-end; gap: 6px; padding: 0 8px; opacity: .22; }
+.kg-stage-eq span { flex: 1; height: 100%; border-radius: 6px 6px 0 0; background: linear-gradient(var(--kg-yellow), var(--kg-pink)); transform-origin: bottom; transform: scaleY(var(--kg-eq)); animation: kg-eq 1.1s ease-in-out infinite alternate; }
+@keyframes kg-drift { 0%, 100% { transform: translateY(0) rotate(-8deg); } 50% { transform: translateY(-26px) rotate(10deg); } }
+@keyframes kg-twinkle { 0%, 100% { transform: scale(.3) rotate(0); opacity: .2; } 50% { transform: scale(1) rotate(45deg); opacity: .9; } }
+@keyframes kg-eq { from { transform: scaleY(calc(var(--kg-eq) * .25)); } to { transform: scaleY(var(--kg-eq)); } }
+@keyframes kg-spot { from { transform: translateX(-12%) rotate(-6deg); } to { transform: translateX(12%) rotate(6deg); } }
+.kg-enter { animation: kg-enter .42s cubic-bezier(.2, .9, .3, 1.2) both; }
+@keyframes kg-enter { from { opacity: 0; transform: translateY(14px) scale(.985); } }
+.kg-loading { min-height: 100dvh; background: var(--kg-blue); }
+
+/* Theme ideas */
+.kg-ideas { display: flex; flex-wrap: wrap; gap: 8px; }
+.kg-idea { min-height: 44px; padding: 0 14px; border: 2px solid var(--kg-navy); border-radius: 999px; background: var(--kg-white); color: var(--kg-navy); font: 700 15px/1 var(--kg-font); cursor: pointer; transition: transform .12s ease; }
+.kg-idea:active { transform: scale(.95); }
+.kg-idea[aria-pressed="true"] { background: var(--kg-yellow); }
+@media (forced-colors: active) { .kg-idea[aria-pressed="true"] { outline: 3px solid Highlight; } }

@@ -66,7 +66,7 @@ export function PlayPage() {
   const isLast = game.activeRoundIndex === game.rounds.length - 1;
   const next = () => commit(nextRound(game));
 
-  return <KgScreen>
+  return <KgScreen calm={round.phase === "voting"}>
     {errorNote}
     {round.phase === "voting"
       ? <div>

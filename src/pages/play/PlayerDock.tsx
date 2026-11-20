@@ -106,7 +106,7 @@ export function PlayerDock({ videoId, hidden, onUnplayable, onSkip }: Props) {
           <button type="button" className="kg-btn kg-btn--icon" aria-label="Play from the start" onClick={() => { player.seekTo(0, true); play(); }}><RotateCcw size={20} aria-hidden="true" /></button>
         </div>
       : apiFailed ? null : <p className="kg-small">Loading the player…</p>}
-    <div className="kg-progress" role="progressbar" aria-label="Song progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}><span style={{ width: `${progress}%` }} /></div>
+    <div className="kg-progress" role="progressbar" aria-label="Song progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}><span style={{ transform: `scaleX(${progress / 100})` }} /></div>
     <p role="status" className="kg-small">{tapHint ? "Tap the video to start it." : ""}</p>
   </section>;
 }

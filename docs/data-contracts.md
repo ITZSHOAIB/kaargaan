@@ -71,6 +71,9 @@ Standings and awards are worked out from round results; they're never stored.
 | `kaargaan.stage-lobby.v2` | host | Lobby: invite, host id, players with sealed status and card contents, pending replacement. Cleared on start. |
 | `kaargaan.crew.v1` | host | Last game's host name, other names, theme and song count, for a rematch. |
 | `kaargaan.card-draft.v2` | player | The invite, player key, name, links and last sealed card. |
+| `kaargaan.sound.v1` | any | `"on"` or `"off"` for game sounds and buzzes. Missing means on. |
+
+`sessionStorage` holds `kaargaan.chunkReload.v1` while the app reloads once after a screen's code fails to load, for example right after a deploy.
 
 Saves from the old pass-the-phone flow are deleted on load: `kaargaan.host-setup.v1`, `kaargaan.player-setup.v1` and `kaargaan.phase1.snapshot.v1`.
 

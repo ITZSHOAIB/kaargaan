@@ -29,5 +29,13 @@ Old routes (`/host`, `/game`, `/player`, `/prepare`) redirect.
 - Never let markup, colour or order hint at a song's owner before the reveal. Vote tiles stay identical apart from name, initial and voted state.
 - Every interactive element is at least 44px, has a visible focus ring on its surface and has an accessible name.
 - Sheets are native `<dialog>` elements named by their title. Escape closes them and focus returns to the opener.
-- Motion is short and decorative, and is turned off under reduced motion. Forced colours keep borders and states visible.
+- Motion is part of the game show, not decoration only, so it follows these rules:
+  - Animate `transform` and `opacity` only. Progress bars use `scaleX`, and button presses move without animating their shadow.
+  - Never wrap or remount the YouTube dock. Animate the panels around it.
+  - Before a reveal, motion, sound and buzz are the same whoever was picked. No per-tile stagger.
+  - `MotionConfig reducedMotion="user"` and the global CSS rule turn movement off under reduced motion. Reveals then jump straight to the result.
+  - The stage backdrop (`StageBackdrop`) is `aria-hidden`, ignores pointers, pauses when the page is hidden, quietens while a song plays and disappears under forced colours.
+  - The motion engine (`motion`, through `LazyMotion` with `m` components) loads after first paint. Nothing may wait on it to become visible.
+- Sound and buzz are one switch in the header (`SoundToggle`), on by default. Cues are synthesised with Web Audio (`src/lib/sfx.ts`), so there are no sound files.
+- Forced colours keep borders and states visible.
 - Every frontend change ends with axe (in the e2e suite) plus a manual keyboard pass.
