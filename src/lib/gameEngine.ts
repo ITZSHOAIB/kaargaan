@@ -26,18 +26,36 @@ export function recordVote(game: Game, voterId: string, ownerId: string): Game {
   return updateRound(game, { ...round, votes: { ...round.votes, [voterId]: ownerId } });
 }
 
-export function reveal(game: Game): Game {
+export function clearVote(game: Game, voterId: string): Game {
+  const round = currentRound(game);
+  if (!round || round.phase !== "voting") throw new Error("Voting is not open.");
+  const votes = { ...round.votes };
+  delete votes[voterId];
+  return updateRound(game, { ...round, votes });
+}
+
+/** A reveal without everyone needs at least half the room, so a near-empty reveal can't hand the owner free points. */
+export function canRevealWithoutMissing(game: Game): boolean {
+  const round = currentRound(game);
+  if (!round || round.phase !== "voting") return false;
+  const voted = game.players.filter((p) => round.votes[p.id]).length;
+  return voted >= Math.max(2, Math.ceil(game.players.length / 2));
+}
+
+export function reveal(game: Game, options: { withoutMissing?: boolean } = {}): Game {
   const round = currentRound(game);
   if (round?.phase === "revealed" && round.result) return game;
   if (!round || round.phase !== "voting") throw new Error("Reveal is not available.");
-  if (game.players.some((p) => !round.votes[p.id])) throw new Error("Every player must vote before reveal.");
+  const absent = game.players.filter((p) => !round.votes[p.id]);
+  if (absent.length && !options.withoutMissing) throw new Error("Every player must vote before reveal.");
+  if (absent.length && !canRevealWithoutMissing(game)) throw new Error("At least half the room must vote before revealing.");
   const ownerId = game.submissions.find((s) => s.id === round.submissionId)?.ownerId;
   if (!ownerId) throw new Error("Round owner is missing.");
   const correct = game.players.filter((p) => p.id !== ownerId && round.votes[p.id] === ownerId);
   const awards: Record<string, number> = {};
   if (correct.length === 0) awards[ownerId] = 10;
   else correct.forEach((p) => { awards[p.id] = correct.length === 1 ? 10 : 5; });
-  const result: RoundResult = { kind: "revealed", ownerId, awards };
+  const result: RoundResult = { kind: "revealed", ownerId, awards, ...(absent.length ? { absentIds: absent.map((p) => p.id) } : {}) };
   return updateRound(game, { ...round, phase: "revealed", result });
 }
 
