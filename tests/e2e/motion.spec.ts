@@ -156,7 +156,8 @@ test("the last reveal opens a celebration: podium, crown and focus on the scores
   await expect(stage).toHaveAttribute("data-fresh", "true");
   await expect(stage.locator(".kg-podium-crown")).toHaveCount(1);
   for (const canvas of await page.locator("canvas").all()) await expect(canvas).toHaveCSS("pointer-events", "none");
-  await page.waitForTimeout(1600);
+  // Check contrast once the awards have flipped in, not halfway through the fade.
+  await page.locator(".kg-awards li").evaluateAll((items) => Promise.all(items.flatMap((li) => li.getAnimations().map((a) => a.finished))));
   await expectAccessible(page);
   await expectNoSideScroll(page);
   await page.reload();
