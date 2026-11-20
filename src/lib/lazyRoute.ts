@@ -18,7 +18,7 @@ export function loadScreen<T extends ComponentType>(load: () => Promise<T>, relo
   );
 }
 
-export function lazyScreen<T extends ComponentType>(load: () => Promise<T>) {
-  const loader = loadScreen(load);
-  return Object.assign(lazy(loader), { preload: loader });
+/** A lazy screen plus `preload`, which only warms the cache: a failed background fetch never reloads mid-game. */
+export function lazyScreen<T extends ComponentType>(load: () => Promise<T>, reload?: () => void) {
+  return Object.assign(lazy(loadScreen(load, reload)), { preload: () => load().then(() => {}, () => {}) });
 }

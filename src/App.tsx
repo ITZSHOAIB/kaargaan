@@ -13,7 +13,7 @@ const loadMotion = () => import("./lib/motionFeatures").then((m) => m.default);
 /** Fetch the other screens once the phone is idle, so a tap never waits on the network. */
 function usePreloadScreens() {
   useEffect(() => {
-    const preload = () => { for (const screen of [StagePage, CardPage, PlayPage]) void screen.preload().catch(() => {}); };
+    const preload = () => { for (const screen of [StagePage, CardPage, PlayPage]) void screen.preload(); };
     if ("requestIdleCallback" in window) {
       const id = requestIdleCallback(preload, { timeout: 3000 });
       return () => cancelIdleCallback(id);

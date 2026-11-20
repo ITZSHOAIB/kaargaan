@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { loadScreen } from "../../src/lib/lazyRoute";
+import { lazyScreen, loadScreen } from "../../src/lib/lazyRoute";
 
 const Screen = () => null;
 beforeEach(() => sessionStorage.clear());
@@ -26,5 +26,14 @@ describe("loading a screen", () => {
     await loadScreen(async () => Screen)();
     void loadScreen(() => Promise.reject(new Error("gone")), reload)();
     await vi.waitFor(() => expect(reload).toHaveBeenCalledTimes(2));
+  });
+});
+
+describe("preloading a screen in the background", () => {
+  it("never reloads the page when the preload fails", async () => {
+    const reload = vi.fn();
+    const screen = lazyScreen(() => Promise.reject(new Error("offline")), reload);
+    await expect(screen.preload()).resolves.toBeUndefined();
+    expect(reload).not.toHaveBeenCalled();
   });
 });
