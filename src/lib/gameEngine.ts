@@ -8,14 +8,8 @@ export function createGame(theme: string, players: Player[], submissions: Submis
     const swap = Math.floor(random() * (index + 1));
     [shuffled[index], shuffled[swap]] = [shuffled[swap], shuffled[index]];
   }
-  const rounds = shuffled.map((submission): Round => ({ id: id("round"), submissionId: submission.id, phase: "listening", votes: {} }));
+  const rounds = shuffled.map((submission): Round => ({ id: id("round"), submissionId: submission.id, phase: "voting", votes: {} }));
   return { id: id("game"), ...(roomId ? { roomId } : {}), theme: theme.trim(), songsPerPlayer: submissions.length / Math.max(players.length, 1), players, submissions, rounds, activeRoundIndex: 0, status: "playing", saveRevision: 0 };
-}
-
-export function beginVoting(game: Game): Game {
-  const round = currentRound(game);
-  if (!round || round.phase !== "listening") throw new Error("Round is not ready for voting.");
-  return updateRound(game, { ...round, phase: "voting" });
 }
 
 export function recordVote(game: Game, voterId: string, ownerId: string): Game {

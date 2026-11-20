@@ -59,7 +59,7 @@ export function loadCurrentGameState(): LoadCurrentGameState {
       return { game: null, error: "A saved game could not be restored. Clear the current game and start over." };
     }
 
-    return { game: envelope.game, error: null };
+    return { game: openListeningRounds(envelope.game), error: null };
   } catch {
     return { game: null, error: "A saved game could not be restored. Clear the current game and start over." };
   }
@@ -121,6 +121,12 @@ function decodeText(value: string): string {
   const binary = atob(value);
   const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
   return new TextDecoder().decode(bytes);
+}
+
+/** Games saved before open voting had a listen-first phase; those rounds are simply open for votes now. */
+function openListeningRounds(game: Game): Game {
+  const rounds = game.rounds.map((round) => ((round.phase as string) === "listening" ? { ...round, phase: "voting" as const } : round));
+  return { ...game, rounds };
 }
 
 function isGame(value: Game | undefined): value is Game {

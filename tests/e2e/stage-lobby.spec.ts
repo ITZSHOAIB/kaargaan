@@ -114,8 +114,8 @@ test("a host collects sealed cards from other phones and starts the game", async
   await expect(row(page, "Rupa")).toContainText("Sealed");
   await expect(row(page, "Arjun")).toContainText("Sealed");
   await page.getByRole("button", { name: "Start the game" }).click();
-  await expect(page).toHaveURL(/\/host$/);
-  await expect(page.getByText("Listen first")).toBeVisible();
+  await expect(page).toHaveURL(/\/play$/);
+  await expect(page.getByRole("heading", { name: "Who picked this song?" })).toBeVisible();
 
   await page.goto("/stage");
   await expect(page.getByRole("link", { name: "Back to the game" })).toBeVisible();
