@@ -7,7 +7,8 @@ test("tabletop screens and round controls fit phone and desktop", async ({ page 
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/");
     await capture(page, { path: `/tmp/kaargaan-home-${width}.png`, fullPage: true });
-    await page.getByRole("link", { name: "Host a game" }).click();
+    // The old room setup lives on at /host until the stage takes over play.
+    await page.goto("/host");
     await expect(page.getByRole("heading", { name: "Set up the room" })).toBeVisible();
     await page.getByRole("button", { name: "Generate room QR" }).click();
     await expect(page.getByRole("heading", { name: "Everyone: scan this room QR" })).toBeVisible();

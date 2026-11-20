@@ -61,7 +61,7 @@ test("a host collects sealed cards from other phones and starts the game", async
   await page.getByRole("button", { name: "Open the lobby" }).click();
 
   await expect(page.getByRole("heading", { name: "Collect the song cards" })).toBeVisible();
-  await expect(row(page, "Sohab")).toContainText("Your songs");
+  await expect(row(page, "Sohab")).toContainText("Not in yet");
   await page.getByRole("button", { name: "Invite players" }).click();
   const shared = await page.evaluate(() => (window as unknown as { shared: ShareData }).shared);
   expect(shared.url).toMatch(/\/card#i=/);

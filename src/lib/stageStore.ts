@@ -3,9 +3,12 @@ import { MAX_PLAYERS, type Lobby, type LobbyPlayer } from "./lobby";
 
 export const LOBBY_KEY = "kaargaan.stage-lobby.v2";
 export const CREW_KEY = "kaargaan.crew.v1";
+export const SETUP_KEY = "kaargaan.stage-setup.v2";
 const LEGACY_KEYS = ["kaargaan.host-setup.v1", "kaargaan.player-setup.v1", "kaargaan.phase1.snapshot.v1"];
 
 export type Crew = { hostName: string; names: string[]; theme: string; songs: number };
+/** The host's setup form before the lobby opens. */
+export type StageSetup = { hostName: string; theme: string; songs: number; sameCrew: boolean };
 
 /** Saves the lobby without its passing notice, so a reload restores the cards but not a stale message. */
 export function saveLobby(lobby: Lobby): string {
@@ -27,6 +30,16 @@ export function loadLobby(): Lobby | null {
   return { v: 2, invite, hostId: value.hostId, players, notice: null, pendingCard: null };
 }
 
+/**
+ * The lobby this tab should build on. Card links the host taps in the chat can open in new tabs,
+ * so another tab may have saved newer cards since this one last rendered.
+ */
+export function latestLobby(current: Lobby): Lobby {
+  const saved = loadLobby();
+  if (!saved || saved.invite.roomId !== current.invite.roomId) return current;
+  return { ...saved, notice: current.notice, pendingCard: current.pendingCard };
+}
+
 export function clearLobby(): void {
   try { localStorage.removeItem(LOBBY_KEY); } catch { /* storage unavailable */ }
 }
@@ -41,6 +54,21 @@ export function loadCrew(): Crew | null {
   if (!Number.isInteger(value.songs) || Number(value.songs) < 1 || Number(value.songs) > MAX_SONGS) return null;
   const names = value.names.filter((n): n is string => typeof n === "string" && Boolean(cleanName(n)));
   return { hostName: value.hostName, names, theme: value.theme, songs: Number(value.songs) };
+}
+
+export function saveSetup(setup: StageSetup): void {
+  try { localStorage.setItem(SETUP_KEY, JSON.stringify(setup)); } catch { /* the form still works, it just won't survive a reload */ }
+}
+
+export function loadSetup(): StageSetup | null {
+  const value = readJson(SETUP_KEY);
+  if (!isRecord(value) || typeof value.hostName !== "string" || typeof value.theme !== "string" || typeof value.sameCrew !== "boolean") return null;
+  if (!Number.isInteger(value.songs) || Number(value.songs) < 1 || Number(value.songs) > MAX_SONGS) return null;
+  return { hostName: value.hostName, theme: value.theme, songs: Number(value.songs), sameCrew: value.sameCrew };
+}
+
+export function clearSetup(): void {
+  try { localStorage.removeItem(SETUP_KEY); } catch { /* storage unavailable */ }
 }
 
 /** Drops saves from the old pass-the-phone setup, which the new flow can't resume. */
