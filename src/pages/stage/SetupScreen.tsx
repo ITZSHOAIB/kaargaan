@@ -28,7 +28,7 @@ export function SetupScreen({ onOpen }: { onOpen: (setup: StageSetup) => void })
     {game?.status === "playing"
       ? <div className="kg-notice">
           <p><strong>A game is in progress</strong> · {game.theme} · Round {game.activeRoundIndex + 1} of {game.rounds.length}</p>
-          <Link className="kg-btn kg-btn--small kg-btn--yellow" to="/host">Back to the game</Link>
+          <Link className="kg-btn kg-btn--small kg-btn--yellow" to="/play">Back to the game</Link>
         </div>
       : null}
     <div>

@@ -47,7 +47,7 @@ export type GameSnapshot = {
 
 export type Player = { id: string; name: string };
 export type Submission = { id: string; ownerId: string; videoId: string };
-export type RoundPhase = "listening" | "voting" | "revealed" | "skipped";
+export type RoundPhase = "voting" | "revealed" | "skipped";
 export type RoundResult =
   | { kind: "revealed"; ownerId: string; awards: Record<string, number>; absentIds?: string[] }
   | { kind: "skipped" };
