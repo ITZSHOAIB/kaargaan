@@ -211,3 +211,17 @@ test("setup offers theme ideas that fill the theme in one tap", async ({ page })
   await expect(ideas.getByRole("button", { name: "Guilty pleasures" })).toHaveAttribute("aria-pressed", "true");
   await expectAccessible(page);
 });
+
+test("a host who refuses the camera can still paste a card link", async ({ page }) => {
+  await stubShare(page);
+  await page.addInitScript(() => {
+    Object.defineProperty(MediaDevices.prototype, "getUserMedia", { configurable: true, value: async () => { throw new DOMException("Permission denied", "NotAllowedError"); } });
+  });
+  const invite = await openLobby(page);
+  await page.getByRole("button", { name: "Scan a card" }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "camera didn't start" })).toBeVisible();
+  await page.getByRole("button", { name: "Stop scanning" }).click();
+  await page.getByLabel("Paste a card link").fill(await cardFrom(invite, "Arjun", ["L_jWHffIx5E", "hTWKbfoikeg"]));
+  await page.getByRole("button", { name: "Add card" }).click();
+  await expect(row(page, "Arjun")).toContainText("Sealed");
+});

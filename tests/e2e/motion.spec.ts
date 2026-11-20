@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { createGame, recordVote } from "../../src/lib/gameEngine";
+import { createGame, nextRound, recordVote, reveal } from "../../src/lib/gameEngine";
 import type { Game, Player } from "../../src/lib/types";
 import { expectAccessible, expectNoSideScroll, mockOEmbed, mockYouTube, seedGame } from "./helpers";
 
@@ -135,4 +135,32 @@ test("each round opens with a stamp and the round track fills as songs are playe
   await expect(page.getByText(/Round 2 of 3/)).toBeVisible();
   await expect(track.locator("[data-state=done]")).toHaveCount(1);
   await expect(page.locator(".kg-round-stamp")).toContainText("Round 2");
+});
+
+test("the last reveal opens a celebration: podium, crown and focus on the scores", async ({ page }) => {
+  let g = game();
+  for (let i = 0; i < g.rounds.length; i += 1) {
+    const owner = ownerOf(g);
+    for (const p of players) g = recordVote(g, p.id, p.id === owner ? players.find((q) => q.id !== p.id)!.id : owner);
+    if (i < g.rounds.length - 1) g = nextRound(reveal(g));
+  }
+  await seedGame(page, g);
+  await page.goto("/play");
+  await page.getByRole("button", { name: "Reveal!" }).click();
+  await page.getByRole("button", { name: "Skip the drumroll" }).click();
+  await page.getByRole("button", { name: "See final scores" }).click();
+  const heading = page.getByRole("heading", { level: 1, name: "Final scores" });
+  await expect(heading).toBeFocused();
+  const stage = page.locator(".kg-podium");
+  await expect(stage).toHaveAttribute("aria-hidden", "true");
+  await expect(stage).toHaveAttribute("data-fresh", "true");
+  await expect(stage.locator(".kg-podium-crown")).toHaveCount(1);
+  for (const canvas of await page.locator("canvas").all()) await expect(canvas).toHaveCSS("pointer-events", "none");
+  // Check contrast once the awards have flipped in, not halfway through the fade.
+  await page.locator(".kg-awards li").evaluateAll((items) => Promise.all(items.flatMap((li) => li.getAnimations().map((a) => a.finished))));
+  await expectAccessible(page);
+  await expectNoSideScroll(page);
+  await page.reload();
+  await expect(page.getByRole("heading", { level: 1, name: "Final scores" })).toBeVisible();
+  await expect(page.locator(".kg-podium")).not.toHaveAttribute("data-fresh", "true");
 });

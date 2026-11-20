@@ -22,6 +22,7 @@ npx tsc -b
 | `appUpdate`, `updateBanner` | An update waits while a game is playing; the banner applies it. |
 | `lazyRoute` | A screen whose code vanished after a deploy reloads the app once, then gives up; a good load resets that. |
 | `streaks`, `drumroll` | Streaks count right guesses in a row, skip over skipped and own songs, ignore unrevealed rounds. The drumroll ends on the owner with the same steps and time for every owner, slowing down. |
+| `podium` | Top three distinct scores, ties sharing a step, nobody up there on zero. |
 | `sfx` | Sound and buzz are on by default and remember being switched off; switched off means no audio context and no vibration; phones without either don't throw. |
 
 ## Browser tests (`tests/e2e`)
@@ -37,7 +38,7 @@ YouTube and oEmbed are stubbed (`mockYouTube`, `mockOEmbed` in `helpers.ts`). Th
   - With reduced motion, no drumroll: the reveal heading takes focus at once.
   - Streak badges after a reveal.
   - Reveal-without, unplayable auto-skip, the tap hint, and the scores, skip and end sheets.
-  - Final scores with a shared crown, a scoreless night and long names.
+  - Final scores with a shared crown (one shared podium step), a scoreless night (no podium) and long names.
   - A whole night from lobby to rematch.
 
 - **Motion** (`motion.spec.ts`, the only spec run with motion on; the others use `reducedMotion: "reduce"`):
@@ -46,6 +47,7 @@ YouTube and oEmbed are stubbed (`mockYouTube`, `mockOEmbed` in `helpers.ts`). Th
   - The sound switch persists.
   - The reveal drumroll is `aria-hidden`, takes focus on its skip button, lands with focus on the reveal heading, never repeats after a reload, and confetti never takes pointer events.
   - Each round's stamp and the round track.
+  - The last reveal leads to final scores with focus on the heading, a fresh podium with one crown, axe after the celebration, and no replay after a reload.
   - Each screen is its own chunk, and the service worker precaches them all.
 
 - **Graphics** (`graphics.spec.ts`, motion on, 320px): the home illustration, the slot discs and the wax seal (fresh only once), and the lobby mailbox and envelope tally following cards in. Each is `aria-hidden`, with axe after animations settle and no side scroll.

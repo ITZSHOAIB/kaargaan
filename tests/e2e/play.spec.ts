@@ -199,6 +199,9 @@ test("final scores handle a shared crown, a scoreless night and long names on an
     await expectNoSideScroll(page);
   }
   await expect(page.getByText("Share the crown. 15 points.")).toBeVisible();
+  // The podium is a picture of the standings: hidden from screen readers, one shared top step.
+  await expect(page.locator(".kg-podium")).toHaveAttribute("aria-hidden", "true");
+  await expect(page.locator(".kg-podium-step")).toHaveCount(1);
   await expect(page.getByRole("list", { name: "Standings" }).getByRole("listitem")).toHaveCount(4);
   await expect(page.getByRole("region", { name: "Awards" })).toContainText("Sharpest ear");
   await expect(page.getByRole("region", { name: "Who picked what" })).toContainText(`${titles[videoIds[0]]}`);
@@ -210,6 +213,7 @@ test("final scores handle a shared crown, a scoreless night and long names on an
   await seedGame(page, scoreless);
   await page.goto("/play");
   await expect(page.getByText("Nobody scored tonight.")).toBeVisible();
+  await expect(page.locator(".kg-podium")).toHaveCount(0);
 
   await page.setViewportSize({ width: 320, height: 700 });
   await seedGame(page, fourRounds(long));
