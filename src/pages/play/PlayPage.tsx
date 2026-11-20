@@ -27,6 +27,8 @@ export function PlayPage() {
   // The round whose reveal is drumming, and the round whose reveal just landed (so it celebrates once).
   const [drumFor, setDrumFor] = useState<string | null>(null);
   const [landed, setLanded] = useState<string | null>(null);
+  // True once the game ends on this visit, so final scores celebrate once.
+  const [finished, setFinished] = useState(false);
   const reduceMotion = useReducedMotion();
   useWakeLock(game?.status === "playing");
 
@@ -67,13 +69,13 @@ export function PlayPage() {
 
   const errorNote = error ? <p role="alert" className="kg-notice kg-notice--warn">{error}</p> : null;
   if (game.status === "completed") {
-    return <KgScreen>{errorNote}<FinalScreen game={game} onPlayAgain={() => leave("/stage")} onDone={() => leave("/")} /></KgScreen>;
+    return <KgScreen>{errorNote}<FinalScreen game={game} fresh={finished} onPlayAgain={() => leave("/stage")} onDone={() => leave("/")} /></KgScreen>;
   }
 
   const round = currentRound(game);
   const videoId = game.submissions.find((s) => s.id === round.submissionId)!.videoId;
   const isLast = game.activeRoundIndex === game.rounds.length - 1;
-  const next = () => { cue("whoosh"); commit(nextRound(game)); };
+  const next = () => { cue("whoosh"); if (commit(nextRound(game)) && isLast) setFinished(true); };
   const revealNow = (withoutMissing: boolean) => {
     if (!commit(reveal(game, { withoutMissing }))) return;
     if (reduceMotion) setLanded(round.id);
@@ -133,7 +135,7 @@ export function PlayPage() {
       ? <Sheet title="End the game now?" onClose={() => setAsk(null)}>
           <p>Final scores count only the rounds revealed so far.</p>
           <div className="kg-row">
-            <button type="button" className="kg-btn kg-btn--pink" onClick={() => { setAsk(null); commit({ ...game, status: "completed", endedEarly: true }); }}>End it</button>
+            <button type="button" className="kg-btn kg-btn--pink" onClick={() => { setAsk(null); if (commit({ ...game, status: "completed", endedEarly: true })) setFinished(true); }}>End it</button>
             <button type="button" className="kg-btn" onClick={() => setAsk(null)}>Keep playing</button>
           </div>
         </Sheet>
