@@ -57,4 +57,22 @@ describe("current game persistence", () => {
     );
     expect(() => saveCurrentGame(saved)).toThrow("This game changed in another tab. Reload before saving.");
   });
+
+  it("opens rounds saved by the old listen-first flow for voting", () => {
+    const game = createGame("Rain", [{ id: "a", name: "Asha" }, { id: "b", name: "Biren" }, { id: "c", name: "Chitra" }], [
+      { id: "s1", ownerId: "a", videoId: "abcdefghijk" },
+      { id: "s2", ownerId: "b", videoId: "lmnopqrstuv" }
+    ]);
+    const old = { ...game, rounds: game.rounds.map((round) => ({ ...round, phase: "listening" })) };
+    localStorage.setItem("kaargaan.current-game.v1", JSON.stringify({ format: "kaargaan-current-game", version: 1, savedAt: "2026-11-01T00:00:00.000Z", game: old }));
+    expect(loadCurrentGameState().game?.rounds.map((round) => round.phase)).toEqual(["voting", "voting"]);
+  });
+
+  it("saves back to back from the returned game, and refuses a stale copy", () => {
+    const game = createGame("Rain", [{ id: "a", name: "Asha" }, { id: "b", name: "Biren" }, { id: "c", name: "Chitra" }], [{ id: "s1", ownerId: "a", videoId: "abcdefghijk" }]);
+    const first = saveCurrentGame(game);
+    const second = saveCurrentGame({ ...first, activeRoundIndex: 0 });
+    expect(second.saveRevision).toBe(2);
+    expect(() => saveCurrentGame(first)).toThrow("changed in another tab");
+  });
 });

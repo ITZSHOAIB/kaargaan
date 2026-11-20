@@ -1,21 +1,19 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
   plugins: [
     react(),
-    tailwindcss(),
     VitePWA({
-      registerType: "autoUpdate",
+      registerType: "prompt",
       includeAssets: ["favicon.svg"],
       manifest: {
         name: "KaarGaan",
         short_name: "KaarGaan",
-        description: "A shared-phone music bluffing game for the same room.",
-        theme_color: "#0f172a",
-        background_color: "#0b1020",
+        description: "Whose song is it? A music bluffing game for friends in the same room.",
+        theme_color: "#2430d9",
+        background_color: "#2430d9",
         display: "standalone",
         start_url: "/",
         icons: [

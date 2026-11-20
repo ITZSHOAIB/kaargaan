@@ -8,14 +8,8 @@ export function createGame(theme: string, players: Player[], submissions: Submis
     const swap = Math.floor(random() * (index + 1));
     [shuffled[index], shuffled[swap]] = [shuffled[swap], shuffled[index]];
   }
-  const rounds = shuffled.map((submission): Round => ({ id: id("round"), submissionId: submission.id, phase: "listening", votes: {} }));
+  const rounds = shuffled.map((submission): Round => ({ id: id("round"), submissionId: submission.id, phase: "voting", votes: {} }));
   return { id: id("game"), ...(roomId ? { roomId } : {}), theme: theme.trim(), songsPerPlayer: submissions.length / Math.max(players.length, 1), players, submissions, rounds, activeRoundIndex: 0, status: "playing", saveRevision: 0 };
-}
-
-export function beginVoting(game: Game): Game {
-  const round = currentRound(game);
-  if (!round || round.phase !== "listening") throw new Error("Round is not ready for voting.");
-  return updateRound(game, { ...round, phase: "voting" });
 }
 
 export function recordVote(game: Game, voterId: string, ownerId: string): Game {
@@ -26,18 +20,36 @@ export function recordVote(game: Game, voterId: string, ownerId: string): Game {
   return updateRound(game, { ...round, votes: { ...round.votes, [voterId]: ownerId } });
 }
 
-export function reveal(game: Game): Game {
+export function clearVote(game: Game, voterId: string): Game {
+  const round = currentRound(game);
+  if (!round || round.phase !== "voting") throw new Error("Voting is not open.");
+  const votes = { ...round.votes };
+  delete votes[voterId];
+  return updateRound(game, { ...round, votes });
+}
+
+/** A reveal without everyone needs at least half the room, so a near-empty reveal can't hand the owner free points. */
+export function canRevealWithoutMissing(game: Game): boolean {
+  const round = currentRound(game);
+  if (!round || round.phase !== "voting") return false;
+  const voted = game.players.filter((p) => round.votes[p.id]).length;
+  return voted >= Math.max(2, Math.ceil(game.players.length / 2));
+}
+
+export function reveal(game: Game, options: { withoutMissing?: boolean } = {}): Game {
   const round = currentRound(game);
   if (round?.phase === "revealed" && round.result) return game;
   if (!round || round.phase !== "voting") throw new Error("Reveal is not available.");
-  if (game.players.some((p) => !round.votes[p.id])) throw new Error("Every player must vote before reveal.");
+  const absent = game.players.filter((p) => !round.votes[p.id]);
+  if (absent.length && !options.withoutMissing) throw new Error("Every player must vote before reveal.");
+  if (absent.length && !canRevealWithoutMissing(game)) throw new Error("At least half the room must vote before revealing.");
   const ownerId = game.submissions.find((s) => s.id === round.submissionId)?.ownerId;
   if (!ownerId) throw new Error("Round owner is missing.");
   const correct = game.players.filter((p) => p.id !== ownerId && round.votes[p.id] === ownerId);
   const awards: Record<string, number> = {};
   if (correct.length === 0) awards[ownerId] = 10;
   else correct.forEach((p) => { awards[p.id] = correct.length === 1 ? 10 : 5; });
-  const result: RoundResult = { kind: "revealed", ownerId, awards };
+  const result: RoundResult = { kind: "revealed", ownerId, awards, ...(absent.length ? { absentIds: absent.map((p) => p.id) } : {}) };
   return updateRound(game, { ...round, phase: "revealed", result });
 }
 
@@ -56,11 +68,6 @@ export function nextRound(game: Game): Game {
 }
 
 export function currentRound(game: Game) { return game.rounds[game.activeRoundIndex]; }
-export function voteOrder(game: Game): Player[] {
-  if (game.players.length === 0) return [];
-  const start = game.activeRoundIndex % game.players.length;
-  return [...game.players.slice(start), ...game.players.slice(0, start)];
-}
 export function standings(game: Game) {
   const scores = Object.fromEntries(game.players.map((p) => [p.id, 0]));
   game.rounds.forEach((r) => { if (r.result?.kind === "revealed") Object.entries(r.result.awards).forEach(([playerId, points]) => { scores[playerId] = (scores[playerId] ?? 0) + points; }); });

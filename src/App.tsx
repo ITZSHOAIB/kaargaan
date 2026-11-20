@@ -1,25 +1,47 @@
-import { Link, Navigate, Route, Routes } from "react-router-dom";
-import { Disc3 } from "lucide-react";
-import { useState } from "react";
-import { RoomHeaderTarget } from "./lib/roomHeader";
+import { Suspense, useEffect } from "react";
+import { LazyMotion, MotionConfig } from "motion/react";
+import { Navigate, Route, Routes } from "react-router-dom";
+import { lazyScreen } from "./lib/lazyRoute";
 import { HomePage } from "./pages/HomePage";
-import { PreparePage } from "./pages/PreparePage";
-import { GamePage } from "./pages/GamePage";
+import { UpdateBanner } from "./ui/UpdateBanner";
+
+const CardPage = lazyScreen(() => import("./pages/card/CardPage").then((m) => m.CardPage));
+const StagePage = lazyScreen(() => import("./pages/stage/StagePage").then((m) => m.StagePage));
+const PlayPage = lazyScreen(() => import("./pages/play/PlayPage").then((m) => m.PlayPage));
+const loadMotion = () => import("./lib/motionFeatures").then((m) => m.default);
+
+/** Fetch the other screens once the phone is idle, so a tap never waits on the network. */
+function usePreloadScreens() {
+  useEffect(() => {
+    const preload = () => { for (const screen of [StagePage, CardPage, PlayPage]) void screen.preload(); };
+    if ("requestIdleCallback" in window) {
+      const id = requestIdleCallback(preload, { timeout: 3000 });
+      return () => cancelIdleCallback(id);
+    }
+    const id = setTimeout(preload, 1500);
+    return () => clearTimeout(id);
+  }, []);
+}
 
 export default function App() {
-  const [roomTarget, setRoomTarget] = useState<HTMLDivElement | null>(null);
-  return <RoomHeaderTarget.Provider value={roomTarget}><div className="app-frame">
-    <a className="skip-link" href="#main-content">Skip to game content</a>
-    <header className="masthead">
-      <Link className="brand" to="/" aria-label="KaarGaan home"><Disc3 size={30} aria-hidden="true" /><h1>KaarGaan<span lang="bn">কার গান?</span></h1></Link>
-      <div ref={setRoomTarget} className="header-room-slot" />
-    </header>
-    <main id="main-content"><Routes>
-      <Route path="/" element={<HomePage/>}/><Route path="/player" element={<PreparePage/>}/>
-      <Route path="/host" element={<GamePage/>}/>
-      <Route path="/prepare" element={<Navigate to="/player" replace/>}/><Route path="/game" element={<Navigate to="/host" replace/>}/>
-      <Route path="*" element={<Navigate to="/" replace/>}/>
-    </Routes></main>
-    <footer className="page-footer"><span>A room full of friends. A playlist full of suspects.</span><span>KaarGaan</span></footer>
-  </div></RoomHeaderTarget.Provider>;
+  usePreloadScreens();
+  return <LazyMotion features={loadMotion} strict>
+    <MotionConfig reducedMotion="user">
+      <UpdateBanner />
+      <Suspense fallback={<div className="kg-loading" aria-busy="true" />}>
+        <Routes>
+          <Route path="/" element={<HomePage/>}/>
+          <Route path="/card" element={<CardPage/>}/>
+          <Route path="/stage" element={<StagePage/>}/>
+          <Route path="/play" element={<PlayPage/>}/>
+          {/* Older links and installed shortcuts */}
+          <Route path="/player" element={<Navigate to="/card" replace/>}/>
+          <Route path="/prepare" element={<Navigate to="/card" replace/>}/>
+          <Route path="/host" element={<Navigate to="/play" replace/>}/>
+          <Route path="/game" element={<Navigate to="/play" replace/>}/>
+          <Route path="*" element={<Navigate to="/" replace/>}/>
+        </Routes>
+      </Suspense>
+    </MotionConfig>
+  </LazyMotion>;
 }
