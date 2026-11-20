@@ -2,9 +2,10 @@ const COLOURS = ["#ffd23f", "#ff4f8b", "#3ddc97", "#ffffff", "#7ad7ff"];
 
 /**
  * Confetti for a reveal or a win. The library loads on first use, never blocks taps,
- * and stays off for anyone who asked their phone for reduced motion.
+ * and stays off for anyone who asked their phone for reduced motion or forced colours.
  */
 export function celebrate(kind: "reveal" | "bluff" | "win"): void {
+  if (window.matchMedia?.("(forced-colors: active)").matches) return;
   void import("canvas-confetti").then(({ default: confetti }) => {
     const base = { disableForReducedMotion: true, colors: COLOURS, zIndex: 40 };
     if (kind === "bluff") {
