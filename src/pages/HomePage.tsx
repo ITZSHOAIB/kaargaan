@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Mail, Mic2 } from "lucide-react";
 import { loadCurrentGameState } from "../lib/gamePersistence";
+import { HeroArt } from "../ui/art/HeroArt";
 import { KgScreen } from "../ui/KgScreen";
 
 export function HomePage() {
@@ -9,6 +10,7 @@ export function HomePage() {
 
   return <KgScreen>
     <div className="kg-hero">
+      <HeroArt />
       <h1 className="kg-title kg-title--hero">Whose song <em>is it?</em></h1>
       <p className="kg-lede">Everyone secretly picks songs. One phone plays them. Guess whose each one is, and keep a straight face when it's yours.</p>
     </div>

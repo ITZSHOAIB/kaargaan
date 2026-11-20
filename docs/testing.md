@@ -48,6 +48,8 @@ YouTube and oEmbed are stubbed (`mockYouTube`, `mockOEmbed` in `helpers.ts`). Th
   - Each round's stamp and the round track.
   - Each screen is its own chunk, and the service worker precaches them all.
 
+- **Graphics** (`graphics.spec.ts`, motion on, 320px): the home illustration, the slot discs and the wax seal (fresh only once), and the lobby mailbox and envelope tally following cards in. Each is `aria-hidden`, with axe after animations settle and no side scroll.
+
 `expectAccessible` runs axe (WCAG 2.2 AA tags) on each screen, including with sheets open. `expectNoSideScroll` checks for no sideways scrolling at 320px.
 
 ## Manual checks per frontend change

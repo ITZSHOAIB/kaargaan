@@ -1,15 +1,21 @@
-import { useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { Lock, Pencil, QrCode, Send } from "lucide-react";
 import { cardLink } from "../../lib/card";
 import type { CardDraft } from "../../lib/cardDraft";
+import { buzz, cue } from "../../lib/sfx";
 import { QrImage } from "../../ui/QrImage";
 
-export function SealedCard({ draft, sealed, onEdit }: { draft: CardDraft; sealed: string; onEdit: () => void }) {
+export function SealedCard({ draft, sealed, fresh = false, onEdit }: { draft: CardDraft; sealed: string; fresh?: boolean; onEdit: () => void }) {
   const { invite, name } = draft;
   const link = cardLink(window.location.origin, sealed);
   const [status, setStatus] = useState("");
   const [manual, setManual] = useState(false);
   const [showQr, setShowQr] = useState(false);
+  useEffect(() => {
+    if (!fresh) return;
+    cue("seal");
+    buzz([30, 50, 80]);
+  }, [fresh]);
 
   async function send() {
     if (typeof navigator.share === "function") {
@@ -36,13 +42,14 @@ export function SealedCard({ draft, sealed, onEdit }: { draft: CardDraft; sealed
       <p className="kg-eyebrow">{invite.theme}</p>
       <h1 className="kg-title">Your song card is <em>ready!</em></h1>
     </div>
-    <section className="kg-sealed" aria-label={`${name}'s sealed card`}>
+    <section className={`kg-sealed${fresh ? " kg-sealed--fresh" : ""}`} aria-label={`${name}'s sealed card`}>
+      <span className="kg-wax" aria-hidden="true" data-fresh={fresh || undefined}>K</span>
       <div className="kg-sealed-head">
         <span className="kg-avatar" style={{ background: "var(--kg-p2)" }} aria-hidden="true">{name.slice(0, 1).toUpperCase()}</span>
         <div><p className="kg-sealed-name">{name}</p><p>{invite.host}'s game</p></div>
       </div>
       <ol>
-        {draft.links.map((_, i) => <li key={i}><span>Song {i + 1}</span><span className="kg-dots" aria-hidden="true" /><Lock size={18} aria-hidden="true" /><span className="sr-only">hidden</span></li>)}
+        {draft.links.map((_, i) => <li key={i} style={{ "--kg-i": i } as CSSProperties}><span>Song {i + 1}</span><span className="kg-dots" aria-hidden="true" /><Lock size={18} aria-hidden="true" /><span className="sr-only">hidden</span></li>)}
       </ol>
       <span className="kg-seal-badge"><Lock size={14} aria-hidden="true" />Sealed</span>
     </section>

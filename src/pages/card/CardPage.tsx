@@ -21,8 +21,11 @@ export function CardPage() {
   const [draft, setDraft] = useState(initial.draft);
   const [linkError, setLinkError] = useState(initial.error);
   const [saveError, setSaveError] = useState("");
+  // True only right after sealing on this visit, so a reload shows the card without the stamp again.
+  const [justSealed, setJustSealed] = useState(false);
 
   function update(next: CardDraft) {
+    setJustSealed(Boolean(next.sealed) && !draft?.sealed);
     setDraft(next);
     setSaveError(saveCardDraft(next));
   }
@@ -47,7 +50,7 @@ export function CardPage() {
     {!draft
       ? <InviteGate onInvite={(invite) => { setLinkError(""); update(startDraft(invite, loadCardDraft())); }} />
       : draft.sealed
-        ? <SealedCard draft={draft} sealed={draft.sealed} onEdit={() => update({ ...draft, sealed: null })} />
+        ? <SealedCard draft={draft} sealed={draft.sealed} fresh={justSealed} onEdit={() => update({ ...draft, sealed: null })} />
         : <CardBuilder draft={draft} onChange={update} />}
   </KgScreen>;
 }

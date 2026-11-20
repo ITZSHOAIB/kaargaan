@@ -377,3 +377,73 @@ body:has(.kg-app) { background: var(--kg-blue); }
   .kg-reveal-rays { display: none; }
   .kg-drumroll-wheel, .kg-streak, .kg-round-stamp { border: 2px solid CanvasText; }
 }
+
+/* Illustrations: inline SVG, coloured from the palette, animated with transforms only. */
+.ha-navy { fill: var(--kg-navy); }
+.ha-pink { fill: var(--kg-pink); }
+.ha-yellow { fill: var(--kg-yellow); }
+.ha-white { fill: var(--kg-white); }
+.ha-stroke { stroke: var(--kg-navy); stroke-width: 3; stroke-linejoin: round; }
+.ha-flap { fill: none; stroke: var(--kg-navy); stroke-width: 2.5; stroke-linejoin: round; }
+.ha-groove { fill: none; stroke: rgb(255 255 255 / .18); stroke-width: 1.5; }
+.ha-shine { fill: rgb(255 255 255 / .55); }
+.ha-beam { fill: rgb(255 255 255 / .07); }
+.ha-ring { fill: none; stroke: var(--kg-yellow); stroke-width: 3; }
+.ha-note { fill: var(--kg-yellow); }
+.ha-note--b { fill: var(--kg-white); }
+.ha-spark { fill: var(--kg-white); }
+.kg-hero-art { display: block; width: 100%; max-width: 360px; height: auto; margin: 0 auto 6px; overflow: visible; }
+.kg-hero-art g, .kg-hero-art path, .kg-hero-art circle { transform-box: fill-box; transform-origin: center; }
+.ha-record { animation: kg-spin 3.2s linear infinite; }
+.ha-dome { animation: kg-press 2.4s cubic-bezier(.3, 1.6, .5, 1) infinite; }
+@keyframes kg-press { 0%, 70%, 100% { transform: translateY(0); } 78% { transform: translateY(5px) scaleY(.92); } }
+.ha-ring { opacity: 0; animation: kg-ring 2.4s ease-out infinite; }
+.ha-ring--b { animation-delay: .25s; }
+@keyframes kg-ring { 0%, 76% { transform: scale(.85); opacity: 0; } 80% { opacity: 1; } 100% { transform: scale(1.7); opacity: 0; } }
+.ha-card { animation: kg-bob 3s ease-in-out infinite; }
+.ha-card--b { animation-duration: 3.6s; animation-delay: -1.2s; }
+@keyframes kg-bob { 50% { transform: translateY(-8px) rotate(4deg); } }
+.ha-note { animation: kg-drift 4s ease-in-out infinite; }
+.ha-note--b { animation-delay: -2s; }
+.ha-spark { animation: kg-twinkle 2.2s ease-in-out infinite; }
+.ha-spark--b { animation-delay: -1.1s; }
+.ha-beams { transform-origin: 50% 0; animation: kg-sway 6s ease-in-out infinite alternate; }
+@keyframes kg-sway { from { transform: rotate(-3deg); } to { transform: rotate(3deg); } }
+.kg-steps li { animation: kg-slide .45s calc(.25s + var(--kg-i, 0) * 90ms) cubic-bezier(.2, 1.2, .4, 1) both; }
+.kg-steps li:nth-child(2) { --kg-i: 1; }
+.kg-steps li:nth-child(3) { --kg-i: 2; }
+.kg-steps li:nth-child(4) { --kg-i: 3; }
+.kg-steps li::before { transition: transform .2s ease; }
+.kg-steps li:nth-child(odd)::before { transform: rotate(-4deg); }
+.kg-steps li:nth-child(even)::before { transform: rotate(4deg); background: var(--kg-pink); }
+
+/* Card: song slot disc and the wax seal */
+.kg-slot-disc { flex: none; width: 16px; height: 16px; border-radius: 50%; background: radial-gradient(circle, var(--kg-navy) 0 2px, var(--kg-pink) 2.5px 5px, var(--kg-navy) 5.5px); animation: kg-spin 1.6s linear infinite, kg-pop .35s cubic-bezier(.2, 1.8, .4, 1); }
+.kg-wax { position: absolute; top: -16px; right: -10px; width: 62px; height: 62px; display: flex; align-items: center; justify-content: center; border-radius: 46% 54% 50% 50% / 52% 46% 54% 48%; background: radial-gradient(circle at 35% 30%, #ff86b0, var(--kg-pink) 45%, #c92b62); border: 3px solid var(--kg-navy); color: var(--kg-white); font-weight: 800; font-size: 26px; transform: rotate(12deg); box-shadow: inset 0 0 0 5px rgb(255 255 255 / .22); }
+.kg-wax[data-fresh] { animation: kg-wax .7s .15s cubic-bezier(.2, 1.4, .4, 1) both; }
+@keyframes kg-wax { 0% { transform: translateY(-60px) scale(2.2) rotate(-30deg); opacity: 0; } 55% { transform: translateY(0) scale(.86) rotate(16deg); opacity: 1; } 75% { transform: scale(1.08) rotate(10deg); } }
+.kg-sealed--fresh { animation: kg-thud .7s .15s ease-out both; }
+@keyframes kg-thud { 0%, 50% { transform: rotate(-1.5deg); } 58% { transform: rotate(-1.5deg) translateY(5px) scale(.985); } 75% { transform: rotate(-1.5deg) translateY(-2px); } 100% { transform: rotate(-1.5deg); } }
+.kg-sealed--fresh li svg { animation: kg-pop .4s calc(.75s + var(--kg-i, 0) * 120ms) cubic-bezier(.2, 1.8, .4, 1) both; }
+
+/* Lobby: mailbox, envelope tally, arrivals */
+.kg-panel--yellow { position: relative; }
+.kg-mailbox { position: absolute; top: -18px; right: 10px; width: 68px; height: 68px; overflow: visible; }
+.kg-mailbox g { transform-box: fill-box; }
+.mb-flag { transform-origin: 0 100%; animation: kg-flag 2.6s ease-in-out infinite; }
+@keyframes kg-flag { 0%, 60%, 100% { transform: rotate(0); } 70% { transform: rotate(-18deg); } 80% { transform: rotate(6deg); } }
+.mb-letter { animation: kg-letter 2.6s ease-in-out infinite; }
+@keyframes kg-letter { 0%, 100% { transform: translateY(0); } 45% { transform: translateY(-6px) rotate(-6deg); } }
+.kg-on-yellow .kg-panel-title { padding-right: 72px; }
+.kg-tally { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.kg-tally span { width: 26px; height: 18px; border-radius: 4px; border: 2px dashed var(--kg-on-blue-line); }
+.kg-tally [data-in] { border: 2px solid var(--kg-navy); background: linear-gradient(155deg, transparent 47%, var(--kg-navy) 48% 52%, transparent 53%) 0 0 / 50% 60% no-repeat, linear-gradient(205deg, transparent 47%, var(--kg-navy) 48% 52%, transparent 53%) 100% 0 / 50% 60% no-repeat, var(--kg-yellow); animation: kg-pop .45s cubic-bezier(.2, 1.8, .4, 1) both; }
+.kg-roster-row { animation: kg-slide .4s cubic-bezier(.2, 1.2, .4, 1) both; }
+.kg-pill--sealed { animation: kg-pop .4s cubic-bezier(.2, 1.8, .4, 1) both; }
+
+@media (forced-colors: active) {
+  .kg-hero-art, .kg-mailbox { display: none; }
+  .kg-tally span { border: 2px solid CanvasText; }
+  .kg-tally [data-in] { background: Highlight; }
+  .kg-wax { forced-color-adjust: none; }
+}

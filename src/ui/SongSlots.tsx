@@ -37,7 +37,7 @@ export function SongSlots({ links, slots, onChange }: { links: string[]; slots: 
         {canPaste ? <button type="button" className="kg-btn kg-btn--icon kg-btn--yellow" aria-label={`Paste song ${i + 1} from clipboard`} onClick={() => void paste(i)}><ClipboardPaste size={20} aria-hidden="true" /></button> : null}
       </div>
       <p id={`song-${i}-status`} className={`kg-status kg-status--${status.tone}`} aria-live="polite">
-        {status.text ? <><Icon size={16} aria-hidden="true" />{status.text}</> : null}
+        {status.text ? <>{status.tone === "ok" ? <span className="kg-slot-disc" aria-hidden="true" /> : <Icon size={16} aria-hidden="true" />}{status.text}</> : null}
       </p>
     </div>;
   });

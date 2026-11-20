@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, Lock, QrCode, ScanLine, Send, UserPlus, X } from "lucide-react";
 import { inviteLink, plural } from "../../lib/card";
 import { lobbyReady, MAX_PLAYERS, MIN_PLAYERS, type Lobby, type LobbyAction, type LobbyPlayer } from "../../lib/lobby";
+import { buzz, cue } from "../../lib/sfx";
 import { listNames } from "../../lib/words";
+import { MailboxArt } from "../../ui/art/MailboxArt";
 import { QrImage } from "../../ui/QrImage";
 import { QrScan } from "../../ui/QrScan";
 import { HostSongs } from "./HostSongs";
@@ -26,12 +28,18 @@ function startHint(lobby: Lobby): string {
 export function LobbyScreen({ lobby, dispatch, onImport, onStart, onStartOver }: Props) {
   const { invite, notice } = lobby;
   const [addingSongs, setAddingSongs] = useState(false);
+  const cardsIn = lobby.players.filter((p) => p.card && !p.swap).length;
+  // A chime when a card lands, but not when the lobby first opens.
+  const lastCount = useRef(cardsIn);
+  useEffect(() => {
+    if (cardsIn > lastCount.current) { cue("seal"); buzz([30, 40, 30]); }
+    lastCount.current = cardsIn;
+  }, [cardsIn]);
 
   if (addingSongs) {
     return <HostSongs songs={invite.songs} onSeal={(videoIds) => { dispatch({ type: "setHostSongs", videoIds }); setAddingSongs(false); }} onCancel={() => setAddingSongs(false)} />;
   }
 
-  const cardsIn = lobby.players.filter((p) => p.card && !p.swap).length;
   const hint = startHint(lobby);
   const ok = notice && (notice.kind === "added" || notice.kind === "replaced" || notice.kind === "unchanged") ? notice.text : "";
 
@@ -40,6 +48,7 @@ export function LobbyScreen({ lobby, dispatch, onImport, onStart, onStartOver }:
       <p className="kg-eyebrow">{invite.theme} · {plural(invite.songs, "song")} each</p>
       <h1 className="kg-title">Collect the song cards</h1>
       <p className="kg-lede">{cardsIn} of {plural(lobby.players.length, "card")} in. Nobody's songs show here, not even yours.</p>
+      <div className="kg-tally" aria-hidden="true">{lobby.players.map((p) => <span key={p.id} data-in={(p.card && !p.swap) || undefined} />)}</div>
     </div>
 
     <p role="status" className={ok ? "kg-notice kg-notice--ok" : "sr-only"}>{ok ? <><CheckCircle2 size={20} aria-hidden="true" />{ok}</> : null}</p>
@@ -66,7 +75,7 @@ export function LobbyScreen({ lobby, dispatch, onImport, onStart, onStartOver }:
 
     <CardImport onImport={onImport} />
 
-    <button type="button" className="kg-btn kg-btn--green kg-btn--big kg-btn--wide" disabled={!lobbyReady(lobby)} aria-describedby={hint ? "start-hint" : undefined} onClick={onStart}>Start the game</button>
+    <button type="button" className={`kg-btn kg-btn--green kg-btn--big kg-btn--wide${lobbyReady(lobby) ? " kg-btn--ready" : ""}`} disabled={!lobbyReady(lobby)} aria-describedby={hint ? "start-hint" : undefined} onClick={onStart}>Start the game</button>
     {hint ? <p id="start-hint" className="kg-small">{hint}</p> : null}
     <StartOver onConfirm={onStartOver} />
   </>;
@@ -99,6 +108,7 @@ function InvitePanel({ lobby }: { lobby: Lobby }) {
   }
 
   return <section className="kg-panel kg-panel--yellow kg-on-yellow" aria-labelledby="invite-heading">
+    <MailboxArt />
     <h2 id="invite-heading" className="kg-panel-title">Invite players</h2>
     <p>Everyone makes a sealed card on their own phone and sends it back to you.</p>
     <button type="button" className="kg-btn kg-btn--navy kg-btn--wide" onClick={() => void share()}><Send size={20} aria-hidden="true" />Invite players</button>
