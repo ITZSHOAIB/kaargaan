@@ -30,6 +30,7 @@ export function FinalScreen({ game, onPlayAgain, onDone }: { game: Game; onPlayA
   const names = new Map(game.players.map((p) => [p.id, p.name]));
   const songs = game.rounds.map((round) => {
     const submission = game.submissions.find((s) => s.id === round.submissionId)!;
+    // Owners of skipped or unplayed songs stay secret, even after the game.
     return { round, videoId: submission.videoId, owner: names.get(submission.ownerId) ?? "" };
   });
   const checks = useVideoChecks(songs.map((s) => s.videoId));
@@ -63,8 +64,8 @@ export function FinalScreen({ game, onPlayAgain, onDone }: { game: Game; onPlayA
         {songs.map(({ round, videoId, owner }, i) => {
           const check = checks.get(videoId);
           return <li key={round.id}>
-            <span>{check?.status === "ok" ? check.title : `Song ${i + 1}`}{round.phase === "skipped" ? " (skipped)" : ""}</span>
-            <strong>{owner}</strong>
+            <span>{check?.status === "ok" ? check.title : `Song ${i + 1}`}</span>
+            {round.result?.kind === "revealed" ? <strong>{owner}</strong> : <span className="kg-muted">{round.phase === "skipped" ? "Skipped" : "Not played"}</span>}
           </li>;
         })}
       </ol>

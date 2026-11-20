@@ -49,6 +49,7 @@
   textarea { resize: vertical; }
   ::placeholder { opacity: 1; }
   ::selection { background: var(--kg-yellow); color: var(--kg-navy); }
+  :focus-visible { outline: 3px solid var(--kg-yellow); outline-offset: 3px; }
   dialog { padding: 0; }
   [hidden]:where(:not([hidden="until-found"])) { display: none !important; }
 }
@@ -270,6 +271,7 @@ body:has(.kg-app) { background: var(--kg-blue); }
 .kg-awards li { display: flex; flex-direction: column; }
 .kg-picks li > span { min-width: 0; overflow-wrap: anywhere; }
 .kg-picks li > strong { flex: none; }
+.kg-picks li > .kg-muted { flex: none; font-weight: 700; font-size: 15px; }
 
 @media (prefers-reduced-motion: reduce) {
   .kg-btn, .kg-sealed, .kg-tile { transition: none; transform: none; }

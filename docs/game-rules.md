@@ -52,7 +52,7 @@ A revealed round can't be changed. Repeated taps or reloads never award a round 
   - Sharpest ear: most right guesses.
   - Master bluffer: most rounds where nobody guessed them.
   - Most suspected: most votes received.
-- **Who picked what** lists every song and its owner, plus a link to tonight's playlist on YouTube. The game is over, so this includes skipped songs (marked as skipped) and any songs left unplayed after an early end.
+- **Who picked what** lists every song, the owner of each revealed song, and a link to tonight's playlist on YouTube. Skipped songs and songs left unplayed after an early end stay secret, even now.
 - The host can **End game** early. Only revealed rounds count.
 - **Play again** returns to setup with the same crew. **Done for tonight** clears the game.
 
