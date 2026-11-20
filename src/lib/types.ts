@@ -10,41 +10,6 @@ export type YouTubeLinkCheck =
       error: string;
     };
 
-export type SongSlip = {
-  format: "kaargaan-song-slip";
-  version: 1;
-  playerName: string;
-  theme: string;
-  videoIds: string[];
-  roomId?: string;
-  roomToken?: string;
-  songsPerPlayer?: number;
-};
-
-export type RoomInvite = {
-  format: "kaargaan-room-invite";
-  version: 1;
-  roomId: string;
-  roomToken: string;
-  theme: string;
-  songsPerPlayer: number;
-  playerCount: number;
-};
-
-export type GameSnapshot = {
-  format: "kaargaan-phase1-snapshot";
-  version: 1;
-  createdAt: string;
-  game: {
-    title: string;
-    theme: string;
-    currentPlayer: string;
-    note: string;
-    lastVideoId: string;
-    submittedVideoIds: string[];
-  };
-};
-
 export type Player = { id: string; name: string };
 export type Submission = { id: string; ownerId: string; videoId: string };
 export type RoundPhase = "voting" | "revealed" | "skipped";
