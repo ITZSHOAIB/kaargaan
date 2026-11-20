@@ -91,7 +91,10 @@ test("the host phone plays a song, takes open votes and reveals the owner", asyn
   await vote(page, others[2].name, others[0].name);
   await page.getByRole("button", { name: "Reveal!" }).click();
 
+  // With reduced motion there's no drumroll: the reveal is there at once and takes focus.
+  await expect(page.getByRole("button", { name: "Skip the drumroll" })).toHaveCount(0);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(`It was ${owner.name}'s song!`);
+  await expect(page.getByRole("heading", { level: 1 })).toBeFocused();
   await expect(page.getByText(titles[videoOf(game, 0)])).toBeVisible();
   await expect(page.getByText("The room read")).toBeVisible();
   const guesses = page.getByRole("list", { name: "Guesses" });
@@ -280,4 +283,21 @@ test("a whole night: lobby, every round, final scores and a rematch with the sam
   await expect(page).toHaveURL(/\/stage$/);
   await expect(page.getByLabel("Same crew again")).toBeChecked();
   await expect(page.getByRole("link", { name: "Back to the game" })).toHaveCount(0);
+});
+
+test("a run of right guesses shows as a streak after the reveal, for fun only", async ({ page }) => {
+  let game = fourRounds();
+  const guesser = players.find((p) => p.id !== ownerOf(game, 0).id && p.id !== ownerOf(game, 1).id)!;
+  for (const index of [0, 1]) {
+    const owner = ownerOf(game, index);
+    for (const p of players) game = recordVote(game, p.id, p.id === owner.id ? players.find((q) => q.id !== p.id)!.id : p.id === guesser.id ? owner.id : players.find((q) => q.id !== p.id && q.id !== owner.id)!.id);
+    game = reveal(game);
+    if (index === 0) game = nextRound(game);
+  }
+  await seedGame(page, game);
+  await page.goto("/play");
+  const guesses = page.getByRole("list", { name: "Guesses" });
+  await expect(guesses).toContainText(`${guesser.name} guessed`);
+  await expect(guesses.getByText("2 in a row")).toHaveCount(1);
+  await expectAccessible(page);
 });
