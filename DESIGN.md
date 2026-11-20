@@ -1,28 +1,33 @@
 # KaarGaan interface
 
-The accepted direction is retro tabletop with bold neubrutalism. See
-[ADR 0004](docs/adr/0004-tabletop-score-sheet-ui.md) for the rationale.
+The accepted direction is **Buzzer Night**, a game-show look for a noisy room at night. See [ADR 0005](docs/adr/0005-buzzer-night-interface.md) for why.
 
-## Implemented system
+## System
 
-- Paper background `#eee9dd`, sheet `#faf8f0`, ink `#18211f`, secondary text `#536056`.
-- Coral `#ef7657` for primary actions; lime `#d5e467` for active navigation and round/reveal controls.
-- Blue `#c7d2ed` frames playback and reveals. Listening and voting use paper sheets with explicit ink text; colored controls never inherit their foreground.
-- Sticky brand header with a compact room ID at the right, mounted by the current host or player screen. Every post-creation/join step includes it.
-- Crisp sheet borders, modest corner radii, and a small offset shadow on the home primary action.
-- Listening, voting, and reveal are separate steps. Desktop places the live score sheet beside the active step; phones place it below.
-- Collection is a centered single column on every device. Accepted entries replace scanning with confirmation and a discard action. Numbered conflict errors move into view and identify only the incoming song positions.
-- Room & players reopens the original invite and collected roster from every host setup step. Local host/player drafts restore independently; replacements are pending until confirmed.
-- Any player edit immediately hides the old generated QR and code; only the latest generation can become shareable. The camera scan region matches the visible square.
-- Final standings use a lime winner banner, trophy seal, real tied ranks, and a short confetti burst. Zero-point games do not crown a winner.
-- Motion is finite and decorative, with reduced-motion support. Step changes restore focus and scroll to the current heading.
-- Focus outlines, native selects, readable input text, and text labels alongside navigation icons.
+- Tokens and every component live in `src/styles/buzzer.css`. It's plain CSS: no utility framework or component library.
+  - Stage blue `#2430d9`, navy outlines `#14185c`.
+  - Yellow `#ffd23f` and pink `#ff4f8b` for actions, green `#3ddc97` for done.
+  - Six player colours, assigned by `nth-child`.
+- Font: Baloo Da 2, for both the Latin text and the Bengali wordmark কার গান?
+- Chunky 3px navy borders and a "lift" shadow on primary buttons; the button presses down on tap.
+- Components: `kg-panel` (white card), `kg-btn` (yellow, pink, quiet, small and icon variants), `kg-notice`, `kg-sheet` (native `<dialog>`), `kg-tile` (vote tile), `kg-sealed` (the tilted song card), `kg-avatar`.
+- Layout: one centred column up to 560px, phone first. Each screen has an eyebrow, a big title and one main action.
 
-Tokens and shared layout classes live in `src/index.css`. Do not reintroduce global overrides
-that reinterpret unrelated Tailwind color classes. Extend the explicit sheet and action styles.
+## Screens
 
-## Verification scope
+| Route | Screen |
+| --- | --- |
+| `/` | Home: host a game or answer an invite, plus how to play. Offers to return to a game in progress. |
+| `/card` | Card builder on a player's phone: name, song slots with live YouTube checks, seal, then share the card link or QR. |
+| `/stage` | Host setup, then the lobby: invite, roster with sealed status, add or remove players, paste or scan cards, the host's own songs, start. |
+| `/play` | One YouTube player, name tiles for voting, reveal, skip and end sheets, final scores with awards and the playlist. |
 
-Chromium checks cover 320px, 390px, 768px, and 1280px layouts, import/confirm/discard, room identity, voting, reveal, and reload recovery. Rendered text contrast is measured against its surface, including disabled controls. YouTube is
-stubbed in the browser test; real mobile playback and camera behavior still require device checks.
-Recovery tests cover corrected encrypted-code and QR imports, generation races, draft validation, reloads, and replacing collected entries.
+Old routes (`/host`, `/game`, `/player`, `/prepare`) redirect.
+
+## Rules for new UI
+
+- Never let markup, colour or order hint at a song's owner before the reveal. Vote tiles stay identical apart from name, initial and voted state.
+- Every interactive element is at least 44px, has a visible focus ring on its surface and has an accessible name.
+- Sheets are native `<dialog>` elements named by their title. Escape closes them and focus returns to the opener.
+- Motion is short and decorative, and is turned off under reduced motion. Forced colours keep borders and states visible.
+- Every frontend change ends with axe (in the e2e suite) plus a manual keyboard pass.

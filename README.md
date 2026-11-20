@@ -2,15 +2,30 @@
 
 **কার গান? — Whose song?**
 
-A music bluffing game for friends in the same room. One shared phone plays songs, records spoken votes, reveals who submitted each song, and calculates scores. Players can prepare their songs on their own phones and transfer them privately using QR codes.
+A music bluffing game for friends in the same room. Everyone secretly picks songs on their own phone. One phone (the host's) plays them one by one. The room argues, votes on whose song it is, and the owner tries to throw everyone off.
 
-## Project status
+## How a game goes
 
-Phase 0 — documentation foundation is complete. Application implementation starts with Phase 1.
+1. **Host a game.** The host opens KaarGaan, sets a theme and 2 or 3 songs each, and shares the invite link.
+2. **Seal a card.** Each player opens the invite on their own phone, pastes YouTube links and sends back a sealed card link. Nobody can see the songs inside, not even the host.
+3. **Collect the cards.** The host's phone gathers every card in the lobby. The host seals their own songs there too, and then starts the game.
+4. **Play.** The host phone plays each song. Anyone taps their name and picks whose song it is, changing their mind as often as they like until the reveal.
+5. **Reveal.** The owner and the song title are shown, along with who guessed what and the points. After the last song come final scores, awards and the night's playlist.
 
-Phase 1 — frontend foundation and mobile feasibility is implemented locally. The app now has a runnable React + TypeScript + Vite PWA shell, a private song-slip prep screen, a visible playback check, and a local recovery demo. Phase 2 adds a manual three-player game slice with visible playback, voting, reveal, scoring, skips, and standings. The production visual direction is now the accepted tabletop score-sheet system in [ADR 0004](docs/adr/0004-tabletop-score-sheet-ui.md). Real-device Android and iPhone verification is still pending.
+Scoring: the owner gets 10 if nobody guesses them. A lone correct guesser gets 10. Two or more correct guessers get 5 each. Full rules are in [docs/game-rules.md](docs/game-rules.md).
 
-The application is a React + TypeScript + Vite PWA, statically hosted on Cloudflare Pages at `kaargaan.sohab.dev`. Room codes identify a local setup invite; they do not create a server room or synchronized multiplayer connection. There is no application backend, Workers, or account system. YouTube playback requires internet.
+## Tech
+
+React 19 + TypeScript + Vite PWA with plain CSS (`src/styles/buzzer.css`). There is no backend: the game lives in the host phone's local storage, and cards travel as AES-GCM sealed links. It's hosted statically on Cloudflare Pages at `kaargaan.sohab.dev`. Songs need an internet connection because playback uses the official YouTube embed.
+
+```sh
+npm install
+npm run dev        # local dev server
+npm test           # unit tests (Vitest)
+npm run test:e2e   # browser tests (Playwright; builds and serves the app)
+npm run lint
+npm run build
+```
 
 ## Reading order
 
@@ -19,22 +34,12 @@ The application is a React + TypeScript + Vite PWA, statically hosted on Cloudfl
 3. [Domain glossary](CONTEXT.md)
 4. [Architecture](docs/architecture.md)
 5. [Data contracts](docs/data-contracts.md)
-6. [Phased implementation plan](docs/plans/v1-phased-plan.md)
-7. [Testing and acceptance](docs/testing.md)
+6. [Testing and acceptance](docs/testing.md)
+7. [Interface](DESIGN.md)
 8. [Architectural decisions](docs/adr/README.md)
 
-## Development boundaries
+## Boundaries
 
-- Implement and validate one phase at a time; update its documentation as behavior lands.
-- Prioritize a complete manual-entry game, with QR and encrypted-code handoffs as convenience paths.
-- Keep ownership hidden in ordinary use, including from the host. This is a trusted-group game, not an anti-cheating security system.
-- Do not introduce accounts, server infrastructure, music downloads, or a history archive into v1.
-- Repository publication and deployment require explicit authorization. Phase 1 builds locally but does not publish or deploy.
-
-## Setup recovery and corrected entries
-
-- **Room & players** is available throughout host setup. Reopen the same QR/invite without changing the room ID, rules, or accepted songs. Choose a particular player to collect or replace their entry; names are display labels, not identifiers.
-- Host setup and player song drafts are saved locally on their respective devices. Reload or return from home to continue. Accepted songs stay on the host even when a player loses their local state. If browser data is cleared, use the host's same invite to rejoin; local storage is not a remote backup.
-- An import reports every conflicting incoming song number and never discloses the earlier owner. Replace only those songs, generate a fresh QR/code, and retry. Different URLs pointing to the same YouTube video are still the same song.
-- Editing a name, song, or room immediately retires generated output. Older encryption/QR work cannot publish over a newer edit. A host replacement stays pending until confirmation; discarding it preserves the original accepted entry.
-- Starting a game removes the host setup draft after the game is saved. Starting over is a separate, explicit action in Room & players.
+- Ownership stays hidden in ordinary use, including from the host. This is a trusted-group game, not anti-cheat: the host phone's storage holds every answer.
+- No accounts, servers, music downloads or history archive.
+- Deployment needs explicit authorization.

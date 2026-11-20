@@ -1,50 +1,61 @@
 # Game rules
 
-## Setup and private submissions
+## Setup
 
-- Use 3–10 players with distinct names, one theme, and an equal number of songs per player: 1–5, default 3.
-- The host is a competing player and enters their own submissions privately too.
-- Each player privately takes the game phone, selects their name, and imports a song slip or enters links manually. Completed selections are hidden on handoff.
-- All players must have the required number of valid, distinct video IDs before play starts. A duplicate requires replacement, without disclosure of whose selection it duplicated.
-- Setup edits require an intentional private handoff. The public setup overview shows only names and completion, not songs or import order.
-- Starting freezes the roster, theme and submissions. Shuffle all submissions once and retain that order through reloads. Every submission is one round.
+- 3–10 players, the host included. Names are up to 20 characters and must be distinct, ignoring case. Add an initial to tell two people apart.
+- The host picks one theme and 2 or 3 songs each. Invites and cards accept up to 5.
+- The host shares the invite. Each player builds a **song card** on their own phone and sends back the sealed card link. The host seals their own songs on the host phone. Nobody, the host included, sees anyone else's songs.
+- The lobby shows each player's name and status only: waiting, sealed, or swap needed.
+- Every song in the game must be a different YouTube video. If an incoming card repeats a song already in, only that card's sender is asked to swap; the message never says who already has the song.
+- A card under a name already in the lobby asks the host to replace it or keep the old one. A fresh card from the same phone updates that player's songs.
+- **Start** needs at least 3 players, every one sealed, and no swaps pending. Starting freezes the roster, theme and songs and shuffles the songs once. Every song is one round, in that saved order.
 
 ## A round
 
-1. Show the current song's visible YouTube player and host controls, never the owner or future queue. Song titles and artists need not be hidden.
-2. Host starts playback. Use the external link if necessary, then return to the same round. Playback completion does not automatically change the round.
-3. Discuss the owner aloud. The owner participates and bluffs like everyone else.
-4. Host records spoken votes in a displayed order. The first voter rotates by one roster position each round, including after skipped rounds. All players can see recorded votes.
-5. Votes can change until reveal. Players cannot vote for themselves. The owner must cast a bluff vote; the UI must not treat that player differently before reveal.
-6. Reveal is enabled only when every player has a vote. Revealing locks the votes, shows ownership and applies the result once.
-7. The host advances to the next round when the group is ready.
+1. The host phone shows "Round n of N", the theme and the video. Never the owner or what's coming next.
+2. Someone taps **Play song**. If the phone ignores it, tap the video itself.
+3. The room talks it over. The owner bluffs like everyone else.
+4. **Voting is open from the start.** Anyone taps their own name and picks whose song it is. You can't pick yourself. You can change your vote or take it back any time before the reveal. The owner must vote too, as a bluff, and the screen treats them exactly like everyone else.
+5. **Reveal** unlocks when everyone has voted. Once at least half the room has voted (minimum 2), the host can also reveal without the rest after confirming. Those players are "stepped out" and score nothing that round.
+6. Revealing locks the votes, shows the owner, the song title and every guess, and adds the points once.
+7. **Next song** moves on when the room is ready.
 
-There is no automatic discussion or voting timer. A player who cannot vote pauses completion; the host must not invent their vote. Roster changes require a new game.
+There is no timer. The host never enters votes for other people.
 
 ## Scoring
 
-Count correct votes from non-owners only.
+Count correct guesses from everyone except the owner.
 
 | Correct guessers | Award |
 | --- | --- |
-| None | Owner receives 10 points. |
-| Exactly one | That guesser receives 10 points; owner receives 0. |
-| Two or more | Each correct guesser receives 5 points; owner receives 0. |
+| None | Owner gets 10 ("Perfect bluff!"). |
+| Exactly one | That guesser gets 10; owner gets 0. |
+| Two or more | Each correct guesser gets 5; owner gets 0. |
 
-Incorrect guesses earn 0. The owner's bluff vote never earns points. Scores are not split from a fixed pool: three correct guessers each receive 5.
+Wrong guesses and the owner's bluff vote earn 0. Points are not split from a pool: three correct guessers get 5 each.
 
-Example: Four players hear A's song. A votes for B. If B alone votes for A, B earns 10. If B and C vote for A, each earns 5. If nobody votes for A, A earns 10.
+Example: four players hear A's song, and A bluffs by voting for B. If only B votes for A, B gets 10. If B and C vote for A, each gets 5. If nobody votes for A, A gets 10.
 
-Once revealed, neither votes nor scoring can be edited. Repeated reveal actions and reloads must preserve the existing result.
+A revealed round can't be changed. Repeated taps or reloads never award a round twice.
 
-## Skips and unavailable songs
+## Skips
 
-The host can retry playback or skip an unresolved round after embedded/external attempts fail. Skip is available before reveal, closes the round, discards its scoring relevance, and awards no points. It does not reveal ownership. Skipped songs are not requeued or replaced during play.
+- The host can skip the current round before the reveal, after confirming. Nobody scores and the owner stays secret.
+- A song YouTube refuses to play here (removed, private, or embedding switched off) skips itself. The message never hints at whose it was.
+- Other load errors offer **Try again** or **Skip this song**.
+- Skipped songs are not replaced. That can cost a player a chance to score as owner, which keeps the night moving.
 
-This can leave a player with fewer owner-scoring opportunities; the group accepts this tradeoff to keep the game moving. If all rounds are skipped, show “No scored rounds” rather than declaring every player a winner.
+## Ending
 
-## Finish and recovery
+- After the last round, **Final scores** shows standings with shared ranks. Tied leaders share the crown. If nobody scored, there's no winner.
+- **Awards** go to the leaders, ties shared, and an award nobody earned is left out:
+  - Sharpest ear: most right guesses.
+  - Master bluffer: most rounds where nobody guessed them.
+  - Most suspected: most votes received.
+- **Who picked what** lists every song and its owner, plus a link to tonight's playlist on YouTube. The game is over, so this includes skipped songs (marked as skipped) and any songs left unplayed after an early end.
+- The host can **End game** early. Only revealed rounds count.
+- **Play again** returns to setup with the same crew. **Done for tonight** clears the game.
 
-Highest score wins; tied leaders share the win. Display the final standings after the last resolved or skipped round. Do not disclose skipped ownership in the final screen.
+## Saving
 
-The current game is saved after actions and resumes after reload. Private setup resumes covered. Keep the final result until an explicit deletion or confirmed replacement with a new game; no past-game archive is retained.
+The host phone saves after every action, and a reload resumes exactly where you were. Only one tab can change the game; a stale tab is told to reload instead of overwriting. Each player's card draft is saved on their own phone.

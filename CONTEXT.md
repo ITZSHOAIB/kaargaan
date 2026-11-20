@@ -5,33 +5,40 @@ KaarGaan is an in-person music guessing and bluffing game. Friends identify who 
 ## Language
 
 **Game**: One session with a fixed group, one theme, and an agreed number of songs per player.
-_Avoid_: Room, lobby
 
 **Player**: A person competing in the game, including the host.
 
-**Host**: The player operating playback and recording the group's spoken votes. Hosting does not grant knowledge of unrevealed song ownership.
-_Avoid_: Non-playing coordinator
+**Host**: The player whose phone runs the game: it collects cards, plays songs and takes votes. Hosting gives no extra knowledge of who owns a song.
 
-**Game device**: The shared phone used to operate a game.
+**Host phone**: The one phone that runs the game. Players vote on it in person.
 
-**Theme**: The host-selected prompt that applies to every submission in a game.
+**Theme**: The prompt every song should fit, chosen by the host.
 
-**Submission**: A song selected by one player for the current game.
+**Invite**: The link the host shares (`/card#i=…`). It carries the theme, the song count and the key that seals cards for this game.
 
-**Owner**: The player who made a particular submission; not the artist or copyright holder.
+**Song card**: One player's songs, sealed on their own phone and sent back to the host as a link (`/stage#c=kg2.…`). Opening it shows only a name and "Sealed".
 
-**Song slip**: A player's prepared collection of song selections, ready to transfer privately to the game device.
+**Lobby**: The host phone's screen for collecting song cards before the game starts.
+_Avoid_: Room
 
-**Handoff**: The private transfer of the game device between players during submission setup.
+**Crew**: The names from the last game, offered again for a rematch.
 
-**Round**: One submission's playback, discussion, voting, and reveal, or an unscored skip.
+**Submission**: One song from one player's card.
 
-**Vote**: A player's guess about the current submission's owner.
+**Owner**: The player who submitted a song; not the artist.
 
-**Bluff vote**: The owner's deliberately misleading vote during their own round. It cannot earn guessing points.
+**Round**: One song: it plays, everyone votes, then it's revealed or skipped.
 
-**Reveal**: The finalization of votes and disclosure of the current owner and scoring outcome.
+**Vote**: A player's guess about the current song's owner. Votes can change or be taken back until the reveal.
 
-**Skip**: Closing a round without revealing its owner or awarding points.
+**Bluff vote**: The owner's own vote during their round. It never earns points.
 
-**Standings**: Players ranked by the points earned in the current game.
+**Stepped out**: A player who hadn't voted when the host revealed without them. They score nothing that round.
+
+**Reveal**: Locking the votes and showing the owner, the guesses and the points.
+
+**Skip**: Closing a round without revealing its owner or awarding points. Songs YouTube can't play skip themselves.
+
+**Standings**: Players ranked by points earned in the current game.
+
+**Awards**: End-of-night titles: Sharpest ear (most right guesses), Master bluffer (fooled the room most often) and Most suspected (most votes received).

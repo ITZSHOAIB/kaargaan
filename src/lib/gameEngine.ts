@@ -68,11 +68,6 @@ export function nextRound(game: Game): Game {
 }
 
 export function currentRound(game: Game) { return game.rounds[game.activeRoundIndex]; }
-export function voteOrder(game: Game): Player[] {
-  if (game.players.length === 0) return [];
-  const start = game.activeRoundIndex % game.players.length;
-  return [...game.players.slice(start), ...game.players.slice(0, start)];
-}
 export function standings(game: Game) {
   const scores = Object.fromEntries(game.players.map((p) => [p.id, 0]));
   game.rounds.forEach((r) => { if (r.result?.kind === "revealed") Object.entries(r.result.awards).forEach(([playerId, points]) => { scores[playerId] = (scores[playerId] ?? 0) + points; }); });

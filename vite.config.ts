@@ -11,9 +11,9 @@ export default defineConfig({
       manifest: {
         name: "KaarGaan",
         short_name: "KaarGaan",
-        description: "A shared-phone music bluffing game for the same room.",
-        theme_color: "#eee9dd",
-        background_color: "#eee9dd",
+        description: "Whose song is it? A music bluffing game for friends in the same room.",
+        theme_color: "#2430d9",
+        background_color: "#2430d9",
         display: "standalone",
         start_url: "/",
         icons: [

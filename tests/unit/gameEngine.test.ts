@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createGame, nextRound, recordVote, reveal, skip, standings, voteOrder } from "../../src/lib/gameEngine";
+import { createGame, nextRound, recordVote, reveal, skip, standings } from "../../src/lib/gameEngine";
 import type { Player, Submission } from "../../src/lib/types";
 
 const players: Player[] = [{ id: "a", name: "Asha" }, { id: "b", name: "Biren" }, { id: "c", name: "Chitra" }];
@@ -16,11 +16,6 @@ describe("game engine", () => {
     g = recordVote(g, owner, other); g = recordVote(g, guesser, owner); g = recordVote(g, other, guesser); const result = reveal(g);
     expect(result.rounds[0].result).toEqual(expect.objectContaining({ kind: "revealed", ownerId: owner }));
     expect(standings(result).find((p) => p.id === guesser)?.score).toBe(10);
-  });
-  it("rotates the first voter by round", () => {
-    const g = game();
-    expect(voteOrder(g).map((player) => player.id)).toEqual(["a", "b", "c"]);
-    expect(voteOrder({ ...g, activeRoundIndex: 1 }).map((player) => player.id)).toEqual(["b", "c", "a"]);
   });
 
   it("rejects self votes and preserves skipped rounds", () => { expect(() => recordVote(game(), "a", "a")).toThrow(); const skipped = skip(game()); expect(skipped.rounds[0].result).toEqual({ kind: "skipped" }); expect(() => nextRound(game())).toThrow(); });
