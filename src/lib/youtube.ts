@@ -81,3 +81,28 @@ function validateCandidate(candidate: string): string | null {
 export function canonicalEmbedUrl(videoId: string) {
   return `https://www.youtube.com/embed/${videoId}`;
 }
+
+export type VideoCheck = { status: "ok"; title: string } | { status: "blocked" | "missing" | "unknown" };
+
+/**
+ * Asks YouTube's oEmbed endpoint about a video. It is only advisory: 401/403 usually means
+ * embedding is switched off, 400/404 means private or gone, anything else stays "unknown".
+ * The player's onError at game time is the real safety net.
+ */
+export async function checkVideo(videoId: string, fetcher: typeof fetch = fetch): Promise<VideoCheck> {
+  const watch = `https://www.youtube.com/watch?v=${videoId}`;
+  try {
+    const response = await fetcher(`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(watch)}`);
+    if (response.status === 401 || response.status === 403) return { status: "blocked" };
+    if (response.status === 400 || response.status === 404) return { status: "missing" };
+    if (!response.ok) return { status: "unknown" };
+    const body = (await response.json()) as { title?: unknown };
+    return typeof body.title === "string" ? { status: "ok", title: body.title } : { status: "unknown" };
+  } catch {
+    return { status: "unknown" };
+  }
+}
+
+export function playlistUrl(videoIds: string[]): string {
+  return `https://www.youtube.com/watch_videos?video_ids=${videoIds.slice(0, 50).join(",")}`;
+}
