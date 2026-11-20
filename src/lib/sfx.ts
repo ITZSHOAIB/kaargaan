@@ -97,6 +97,27 @@ const CUES: Record<Cue, Note[]> = {
   ]
 };
 
+/**
+ * iPhone only lets audio start inside a tap, and some cues fire later (after sealing, on a reveal).
+ * So the first tap or key press anywhere wakes the audio with a silent sample.
+ */
+function unlockOnFirstTap(): void {
+  if (typeof window === "undefined") return;
+  const unlock = () => {
+    const ctx = audio();
+    if (!ctx) return;
+    try {
+      const source = ctx.createBufferSource();
+      source.buffer = ctx.createBuffer(1, 1, 22050);
+      source.connect(ctx.destination);
+      source.start();
+    } catch { /* nothing to wake */ }
+  };
+  window.addEventListener("pointerdown", unlock, { capture: true, once: true });
+  window.addEventListener("keydown", unlock, { capture: true, once: true });
+}
+unlockOnFirstTap();
+
 export function cue(name: Cue): void {
   const ctx = audio();
   if (ctx) play(ctx, CUES[name]);
