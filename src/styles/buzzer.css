@@ -442,8 +442,7 @@ body:has(.kg-app) { background: var(--kg-blue); }
 .kg-pill--sealed { animation: kg-pop .4s cubic-bezier(.2, 1.8, .4, 1) both; }
 
 @media (forced-colors: active) {
-  .kg-hero-art, .kg-mailbox { display: none; }
+  .kg-hero-art, .kg-mailbox, .kg-wax { display: none; }
   .kg-tally span { border: 2px solid CanvasText; }
   .kg-tally [data-in] { background: Highlight; }
-  .kg-wax { forced-color-adjust: none; }
 }
