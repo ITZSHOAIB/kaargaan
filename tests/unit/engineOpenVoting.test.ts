@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { beginVoting, canRevealWithoutMissing, clearVote, createGame, recordVote, reveal, standings } from "../../src/lib/gameEngine";
+import { canRevealWithoutMissing, clearVote, createGame, recordVote, reveal, standings } from "../../src/lib/gameEngine";
 import type { Game, Player, Submission } from "../../src/lib/types";
 
 const players: Player[] = ["a", "b", "c", "d", "e", "f"].map((id) => ({ id, name: id.toUpperCase() }));
 const submissions: Submission[] = players.map((p, i) => ({ id: `s${i}`, ownerId: p.id, videoId: `video${i}xxxx` }));
-const start = () => beginVoting(createGame("Rain", players, submissions, () => 0));
+const start = () => createGame("Rain", players, submissions, () => 0);
 const ownerOf = (g: Game) => g.submissions.find((s) => s.id === g.rounds[g.activeRoundIndex].submissionId)!.ownerId;
 
 describe("open voting", () => {
