@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Check } from "lucide-react";
 import { canRevealWithoutMissing } from "../../lib/gameEngine";
 import type { Game, Player, Round } from "../../lib/types";
+import { warmCelebrate } from "../../lib/celebrate";
+import { buzz, cue } from "../../lib/sfx";
 import { listNames } from "../../lib/words";
 import { Sheet } from "../../ui/Sheet";
 
@@ -24,6 +26,7 @@ export function VotingPanel({ game, round, onVote, onClearVote, onReveal }: Prop
   const voted = game.players.filter((p) => round.votes[p.id]).length;
   const missing = game.players.filter((p) => !round.votes[p.id]);
   const everyone = missing.length === 0;
+  useEffect(warmCelebrate, []);
 
   return <>
     <section className="kg-votes" aria-label="Votes">
@@ -31,6 +34,7 @@ export function VotingPanel({ game, round, onVote, onClearVote, onReveal }: Prop
         <h2 className="kg-panel-title">Tap your name to vote</h2>
         <p role="status" className="kg-small">{voted} of {game.players.length} voted</p>
       </div>
+      <div className="kg-meter" aria-hidden="true"><span style={{ transform: `scaleX(${voted / game.players.length})` }} /></div>
       <ul className="kg-tiles">
         {game.players.map((player) => {
           const hasVoted = Boolean(round.votes[player.id]);
@@ -45,7 +49,7 @@ export function VotingPanel({ game, round, onVote, onClearVote, onReveal }: Prop
       </ul>
     </section>
 
-    <button type="button" className="kg-btn kg-btn--pink kg-btn--big kg-btn--wide" disabled={!everyone} onClick={() => onReveal(false)}>Reveal!</button>
+    <button type="button" className={`kg-btn kg-btn--pink kg-btn--big kg-btn--wide${everyone ? " kg-btn--ready" : ""}`} disabled={!everyone} onClick={() => onReveal(false)}>Reveal!</button>
     {!everyone && canRevealWithoutMissing(game)
       ? <button type="button" className="kg-btn kg-btn--quiet" onClick={() => setAskMissing(true)}>Someone stepped out? Reveal without them</button>
       : null}
@@ -54,11 +58,11 @@ export function VotingPanel({ game, round, onVote, onClearVote, onReveal }: Prop
       ? <Sheet title={`${voter.name}, whose song is it?`} onClose={() => setVoter(null)}>
           <div className="kg-choices">
             {game.players.filter((p) => p.id !== voter.id).map((p) => (
-              <button key={p.id} type="button" className="kg-btn kg-btn--wide" onClick={() => { onVote(voter.id, p.id); setVoter(null); }}>{p.name}</button>
+              <button key={p.id} type="button" className="kg-btn kg-btn--wide" onClick={() => { cue("vote"); buzz([25]); onVote(voter.id, p.id); setVoter(null); }}>{p.name}</button>
             ))}
           </div>
           {round.votes[voter.id]
-            ? <button type="button" className="kg-btn kg-btn--quiet" onClick={() => { onClearVote(voter.id); setVoter(null); }}>Take back my vote</button>
+            ? <button type="button" className="kg-btn kg-btn--quiet" onClick={() => { cue("tap"); onClearVote(voter.id); setVoter(null); }}>Take back my vote</button>
             : null}
           <button type="button" className="kg-btn kg-btn--quiet" onClick={() => setVoter(null)}>Cancel</button>
         </Sheet>

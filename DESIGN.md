@@ -35,6 +35,8 @@ Old routes (`/host`, `/game`, `/player`, `/prepare`) redirect.
   - Before a reveal, motion, sound and buzz are the same whoever was picked. No per-tile stagger.
   - `MotionConfig reducedMotion="user"` and the global CSS rule turn movement off under reduced motion. Reveals then jump straight to the result.
   - The stage backdrop (`StageBackdrop`) is `aria-hidden`, ignores pointers, pauses when the page is hidden, quietens while a song plays and disappears under forced colours.
+  - Play: each round opens with a stamp and a round track. Voted tiles get a stamp, a meter fills, and a ring pulses round **Reveal!** once everyone has voted, while the button itself stays still. Every vote gets the same sound and buzz.
+  - Reveal: after the save, a drumroll (`Drumroll.tsx`, `lib/drumroll.ts`) with a fixed number of steps and fixed timing, then the reveal card springs in with rays, confetti and staggered points. A perfect bluff turns the card pink and plays a "wah". Focus moves to the reveal heading. A reload never drums or celebrates again.
   - The motion engine (`motion`, through `LazyMotion` with `m` components) loads after first paint. Nothing may wait on it to become visible.
 - Sound and buzz are one switch in the header (`SoundToggle`), on by default. Cues are synthesised with Web Audio (`src/lib/sfx.ts`), so there are no sound files.
 - Forced colours keep borders and states visible.

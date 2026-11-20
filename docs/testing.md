@@ -21,6 +21,7 @@ npx tsc -b
 | `youtube`, `oembed`, `qrScanRegion` | Link normalisation and rejection; oEmbed status mapping; scan square. |
 | `appUpdate`, `updateBanner` | An update waits while a game is playing; the banner applies it. |
 | `lazyRoute` | A screen whose code vanished after a deploy reloads the app once, then gives up; a good load resets that. |
+| `streaks`, `drumroll` | Streaks count right guesses in a row, skip over skipped and own songs, ignore unrevealed rounds. The drumroll ends on the owner with the same steps and time for every owner, slowing down. |
 | `sfx` | Sound and buzz are on by default and remember being switched off; switched off means no audio context and no vibration; phones without either don't throw. |
 
 ## Browser tests (`tests/e2e`)
@@ -33,6 +34,8 @@ YouTube and oEmbed are stubbed (`mockYouTube`, `mockOEmbed` in `helpers.ts`). Th
 - **Play:**
   - Open voting with change and take-back.
   - Tiles that are identical in the DOM, and no ids in the markup.
+  - With reduced motion, no drumroll: the reveal heading takes focus at once.
+  - Streak badges after a reveal.
   - Reveal-without, unplayable auto-skip, the tap hint, and the scores, skip and end sheets.
   - Final scores with a shared crown, a scoreless night and long names.
   - A whole night from lobby to rematch.
@@ -41,6 +44,8 @@ YouTube and oEmbed are stubbed (`mockYouTube`, `mockOEmbed` in `helpers.ts`). Th
   - One YouTube player lives through votes, reveals and the next song.
   - The stage backdrop is `aria-hidden`, ignores pointers and doesn't widen a 320px page. Axe runs after the entrance settles.
   - The sound switch persists.
+  - The reveal drumroll is `aria-hidden`, takes focus on its skip button, lands with focus on the reveal heading, never repeats after a reload, and confetti never takes pointer events.
+  - Each round's stamp and the round track.
   - Each screen is its own chunk, and the service worker precaches them all.
 
 `expectAccessible` runs axe (WCAG 2.2 AA tags) on each screen, including with sheets open. `expectNoSideScroll` checks for no sideways scrolling at 320px.
