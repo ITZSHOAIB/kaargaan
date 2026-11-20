@@ -17,7 +17,7 @@
 3. The room talks it over. The owner bluffs like everyone else.
 4. **Voting is open from the start.** Anyone taps their own name and picks whose song it is. You can't pick yourself. You can change your vote or take it back any time before the reveal. The owner must vote too, as a bluff, and the screen treats them exactly like everyone else.
 5. **Reveal** unlocks when everyone has voted. Once at least half the room has voted (minimum 2), the host can also reveal without the rest after confirming. Those players are "stepped out" and score nothing that round.
-6. Revealing locks the votes, shows the owner, the song title and every guess, and adds the points once.
+6. Revealing locks the votes, then a short drumroll runs round the room (anyone can skip it) and lands on the owner. The screen shows the song title and every guess, and adds the points once. The drumroll takes the same time whoever the owner is, and it's left out when the phone asks for reduced motion.
 7. **Next song** moves on when the room is ready.
 
 There is no timer. The host never enters votes for other people.
@@ -37,6 +37,8 @@ Wrong guesses and the owner's bluff vote earn 0. Points are not split from a poo
 Example: four players hear A's song, and A bluffs by voting for B. If only B votes for A, B gets 10. If B and C vote for A, each gets 5. If nobody votes for A, A gets 10.
 
 A revealed round can't be changed. Repeated taps or reloads never award a round twice.
+
+**Streaks** are for fun. After a reveal, "3 in a row" shows next to anyone with two or more right guesses in a row. Skipped songs and your own songs don't break a streak. Streaks never add points.
 
 ## Skips
 

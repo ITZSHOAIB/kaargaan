@@ -68,3 +68,71 @@ test("each screen loads as its own chunk, and the offline cache holds them all",
   const sw = await (await request.get("/sw.js")).text();
   for (const chunk of ["PlayPage", "StagePage", "CardPage"]) expect(sw, chunk).toMatch(new RegExp(`${chunk}-[\\w-]+\\.js`));
 });
+
+async function voteEveryone(page: import("@playwright/test").Page, g: Game) {
+  const owner = players.find((p) => p.id === ownerOf(g))!;
+  for (const p of players) {
+    await page.getByRole("region", { name: "Votes" }).getByRole("button", { name: new RegExp(`^${p.name}\\b`) }).click();
+    const pick = p.id === owner.id ? players.find((q) => q.id !== owner.id)! : owner;
+    await page.getByRole("dialog").getByRole("button", { name: pick.name, exact: true }).click();
+  }
+  return owner;
+}
+
+test("the reveal builds suspense with a drumroll, then lands on the owner", async ({ page }) => {
+  const g = game();
+  await seedGame(page, g);
+  await page.goto("/play");
+  const owner = await voteEveryone(page, g);
+  await page.getByRole("button", { name: "Reveal!" }).click();
+  const skip = page.getByRole("button", { name: "Skip the drumroll" });
+  await expect(skip).toBeFocused();
+  await expect(page.locator(".kg-drumroll-wheel")).toHaveAttribute("aria-hidden", "true");
+  await expectAccessible(page);
+  const heading = page.getByRole("heading", { level: 1, name: `It was ${owner.name}'s song!` });
+  await expect(heading).toBeVisible({ timeout: 4000 });
+  await expect(heading).toBeFocused();
+  await expect(skip).toHaveCount(0);
+  for (const canvas of await page.locator("canvas").all()) await expect(canvas).toHaveCSS("pointer-events", "none");
+  await page.waitForTimeout(800);
+  await expectAccessible(page);
+  await expectNoSideScroll(page);
+});
+
+test("the drumroll can be skipped", async ({ page }) => {
+  const g = game();
+  await seedGame(page, g);
+  await page.goto("/play");
+  const owner = await voteEveryone(page, g);
+  await page.getByRole("button", { name: "Reveal!" }).click();
+  await page.getByRole("button", { name: "Skip the drumroll" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: `It was ${owner.name}'s song!` })).toBeFocused();
+});
+
+test("a reloaded reveal doesn't drum again", async ({ page }) => {
+  const g = game();
+  await seedGame(page, g);
+  await page.goto("/play");
+  const owner = await voteEveryone(page, g);
+  await page.getByRole("button", { name: "Reveal!" }).click();
+  await page.getByRole("button", { name: "Skip the drumroll" }).click();
+  await page.reload();
+  await expect(page.getByRole("heading", { level: 1, name: `It was ${owner.name}'s song!` })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Skip the drumroll" })).toHaveCount(0);
+});
+
+test("each round opens with a stamp and the round track fills as songs are played", async ({ page }) => {
+  let g = game();
+  for (const p of players) g = recordVote(g, p.id, ownerOf(g) === p.id ? players.find((q) => q.id !== p.id)!.id : ownerOf(g));
+  await seedGame(page, g);
+  await page.goto("/play");
+  const track = page.locator(".kg-round-track");
+  await expect(track).toHaveAttribute("aria-hidden", "true");
+  await expect(track.locator("[data-state=now]")).toHaveCount(1);
+  await page.getByRole("button", { name: "Reveal!" }).click();
+  await page.getByRole("button", { name: "Skip the drumroll" }).click();
+  await page.getByRole("button", { name: "Next song" }).click();
+  await expect(page.getByText(/Round 2 of 3/)).toBeVisible();
+  await expect(track.locator("[data-state=done]")).toHaveCount(1);
+  await expect(page.locator(".kg-round-stamp")).toContainText("Round 2");
+});
