@@ -41,7 +41,7 @@ export async function expectNoSideScroll(page: Page) {
 
 /**
  * Stands in for YouTube's iframe API. Tests drive it through window.__yt: fail(code) and failFor(code, id)
- * fire player errors, `time` moves playback, and window.__ytBlockPlay makes play() do nothing, the way
+ * fire player errors, `time` moves playback, window.__ytCreated counts players, and window.__ytBlockPlay makes play() do nothing, the way
  * a phone ignores scripted play until someone taps the video.
  */
 const FAKE_YOUTUBE = `(function () {
@@ -50,7 +50,7 @@ const FAKE_YOUTUBE = `(function () {
     frame.title = "YouTube player";
     el.replaceWith(frame);
     this.videoId = opts.videoId; this.state = -1; this.time = 0; this.events = opts.events || {};
-    window.__yt = this;
+    window.__yt = this; window.__ytCreated = (window.__ytCreated || 0) + 1;
     var self = this;
     setTimeout(function () { self.events.onReady && self.events.onReady({ target: self }); }, 0);
   }

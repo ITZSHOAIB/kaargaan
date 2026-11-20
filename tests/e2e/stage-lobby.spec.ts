@@ -17,7 +17,7 @@ async function stubShare(page: Page) {
 async function openLobby(page: Page, host = "Sohab", songs: 2 | 3 = 2): Promise<Invite> {
   await page.goto("/stage");
   await page.getByLabel("Your name").fill(host);
-  await page.getByLabel("Theme").fill("Songs on repeat");
+  await page.getByLabel("Theme", { exact: true }).fill("Songs on repeat");
   await page.getByRole("radio", { name: `${songs} songs` }).check();
   await page.getByRole("button", { name: "Open the lobby" }).click();
   await expect(page.getByRole("heading", { name: "Collect the song cards" })).toBeVisible();
@@ -51,11 +51,11 @@ test("a host collects sealed cards from other phones and starts the game", async
   await expect(page.getByRole("heading", { name: "Set up the game" })).toBeVisible();
   await expectAccessible(page);
   await page.getByLabel("Your name").fill("Sohab");
-  await page.getByLabel("Theme").fill("Monsoon night");
+  await page.getByLabel("Theme", { exact: true }).fill("Monsoon night");
   await page.getByRole("radio", { name: "3 songs" }).check();
   await page.reload();
   await expect(page.getByLabel("Your name")).toHaveValue("Sohab");
-  await expect(page.getByLabel("Theme")).toHaveValue("Monsoon night");
+  await expect(page.getByLabel("Theme", { exact: true })).toHaveValue("Monsoon night");
   await expect(page.getByRole("radio", { name: "3 songs" })).toBeChecked();
   await page.getByRole("radio", { name: "2 songs" }).check();
   await page.getByRole("button", { name: "Open the lobby" }).click();
@@ -201,4 +201,13 @@ test("the lobby fits a 320px phone", async ({ page }) => {
     const box = await target.boundingBox();
     if (box) expect(Math.min(box.width, box.height), await target.innerText()).toBeGreaterThanOrEqual(44);
   }
+});
+
+test("setup offers theme ideas that fill the theme in one tap", async ({ page }) => {
+  await page.goto("/stage");
+  const ideas = page.getByRole("group", { name: "Theme ideas" });
+  await ideas.getByRole("button", { name: "Guilty pleasures" }).click();
+  await expect(page.getByLabel("Theme", { exact: true })).toHaveValue("Guilty pleasures");
+  await expect(ideas.getByRole("button", { name: "Guilty pleasures" })).toHaveAttribute("aria-pressed", "true");
+  await expectAccessible(page);
 });
