@@ -3,22 +3,25 @@ import { Disc3 } from "lucide-react";
 import { useState } from "react";
 import { RoomHeaderTarget } from "./lib/roomHeader";
 import { HomePage } from "./pages/HomePage";
-import { PreparePage } from "./pages/PreparePage";
 import { GamePage } from "./pages/GamePage";
 import { CardPage } from "./pages/card/CardPage";
+import { StagePage } from "./pages/stage/StagePage";
 import { UpdateBanner } from "./components/UpdateBanner";
 
 export default function App() {
   return <>
     <UpdateBanner />
     <Routes>
+      <Route path="/" element={<HomePage/>}/>
       <Route path="/card" element={<CardPage/>}/>
+      <Route path="/stage" element={<StagePage/>}/>
+      <Route path="/player" element={<Navigate to="/card" replace/>}/>
+      <Route path="/prepare" element={<Navigate to="/card" replace/>}/>
       <Route element={<LegacyFrame/>}>
-        <Route path="/" element={<HomePage/>}/><Route path="/player" element={<PreparePage/>}/>
         <Route path="/host" element={<GamePage/>}/>
-        <Route path="/prepare" element={<Navigate to="/player" replace/>}/><Route path="/game" element={<Navigate to="/host" replace/>}/>
-        <Route path="*" element={<Navigate to="/" replace/>}/>
+        <Route path="/game" element={<Navigate to="/host" replace/>}/>
       </Route>
+      <Route path="*" element={<Navigate to="/" replace/>}/>
     </Routes>
   </>;
 }

@@ -16,7 +16,8 @@ export type LobbyAction =
   | { type: "setHostSongs"; videoIds: string[] }
   | { type: "confirmReplace" }
   | { type: "cancelReplace" }
-  | { type: "dismissNotice" };
+  | { type: "dismissNotice" }
+  | { type: "showError"; text: string };
 
 export function createLobby(input: { theme: string; songs: number; hostName: string; crew: string[] }): Lobby {
   const invite = createInvite({ theme: input.theme, songs: input.songs, host: input.hostName });
@@ -56,6 +57,8 @@ export function lobbyReducer(lobby: Lobby, action: LobbyAction): Lobby {
       return { ...lobby, pendingCard: null, notice: null };
     case "dismissNotice":
       return { ...lobby, notice: null };
+    case "showError":
+      return notice(lobby, "error", action.text);
   }
 }
 
