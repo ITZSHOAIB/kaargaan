@@ -69,7 +69,7 @@ export function StagePage() {
     const names = fresh.players.filter((p) => p.id !== fresh.hostId).map((p) => p.name);
     saveCrew({ hostName: host.name, names, theme: fresh.invite.theme, songs: fresh.invite.songs });
     saveSetup({ hostName: host.name, theme: fresh.invite.theme, songs: fresh.invite.songs, sameCrew: true });
-    navigate("/host");
+    navigate("/play");
   }
 
   function startOver() {

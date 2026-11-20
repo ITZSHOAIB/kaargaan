@@ -6,6 +6,7 @@
   --kg-yellow: #ffd23f;
   --kg-pink: #ff4f8b;
   --kg-pink-soft: #ffe3ee;
+  --kg-pink-deep: #b0124f;
   --kg-green: #3ddc97;
   --kg-white: #ffffff;
   --kg-on-blue-muted: #e4e6ff;
@@ -179,11 +180,76 @@ body:has(.kg-app) { background: var(--kg-blue); }
 .kg-confirm .kg-row { width: 100%; }
 .kg-on-yellow .kg-status { color: var(--kg-navy); }
 
+/* Play: the docked player */
+.kg-dock { display: flex; flex-direction: column; gap: 10px; padding: 12px; background: var(--kg-navy); border: var(--kg-border); border-radius: var(--kg-radius-lg); }
+.kg-dock[hidden] { display: none; }
+.kg-video { aspect-ratio: 16 / 9; width: 100%; overflow: hidden; border-radius: 12px; background: #000; }
+.kg-video iframe { display: block; width: 100%; height: 100%; border: 0; }
+.kg-dock-controls { display: flex; gap: 10px; }
+.kg-dock-controls .kg-btn--wide { flex: 1; width: auto; }
+.kg-progress { height: 10px; border-radius: 999px; background: var(--kg-blue-raised); overflow: hidden; }
+.kg-progress span { display: block; height: 100%; background: var(--kg-yellow); transition: width .5s linear; }
+.kg-dock .kg-small:empty { display: none; }
+
+/* Play: vote tiles. Colours follow seat order in CSS so every tile's markup is the same. */
+.kg-votes { display: flex; flex-direction: column; gap: 10px; }
+.kg-votes-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.kg-tiles { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.kg-tile { box-sizing: border-box; width: 100%; min-height: 112px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 12px; border: var(--kg-border); border-radius: var(--kg-radius); background: var(--kg-white); color: var(--kg-navy); box-shadow: var(--kg-lift); font: inherit; text-align: left; cursor: pointer; }
+.kg-tile:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--kg-navy); }
+.kg-tile-name { font-weight: 800; font-size: 19px; line-height: 1.1; overflow-wrap: anywhere; }
+.kg-tile-state { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; font-size: 14px; color: var(--kg-on-white-muted); }
+.kg-tile--voted { background: var(--kg-green); }
+.kg-tile--voted .kg-tile-state { color: var(--kg-navy); }
+.kg-tiles li:nth-child(6n+1) .kg-avatar { background: var(--kg-p1); }
+.kg-tiles li:nth-child(6n+2) .kg-avatar { background: var(--kg-p2); }
+.kg-tiles li:nth-child(6n+3) .kg-avatar { background: var(--kg-p3); }
+.kg-tiles li:nth-child(6n+4) .kg-avatar { background: var(--kg-p4); }
+.kg-tiles li:nth-child(6n+5) .kg-avatar { background: var(--kg-p5); }
+.kg-tiles li:nth-child(6n+6) .kg-avatar { background: var(--kg-p6); }
+.kg-host-tools { justify-content: center; }
+.kg-host-tools > .kg-btn { flex: 0 1 auto; }
+
+/* Bottom sheet */
+.kg-sheet { box-sizing: border-box; width: min(560px, 100%); max-width: 100%; max-height: 85dvh; margin: auto auto 0; padding: 0; border: var(--kg-border); border-bottom: 0; border-radius: 24px 24px 0 0; background: var(--kg-white); color: var(--kg-navy); font-family: var(--kg-font); }
+.kg-sheet::backdrop { background: rgb(20 24 92 / .6); }
+.kg-sheet-body { display: flex; flex-direction: column; gap: 12px; padding: 18px 16px calc(18px + env(safe-area-inset-bottom)); }
+.kg-sheet p { margin: 0; font-weight: 600; }
+.kg-sheet *:focus-visible { outline: 3px solid var(--kg-blue); outline-offset: 3px; }
+.kg-sheet .kg-btn--quiet { color: var(--kg-navy); }
+.kg-choices { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+
+/* Reveal */
+.kg-reveal { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 22px 16px; text-align: center; background: var(--kg-yellow); color: var(--kg-navy); border: var(--kg-border); border-radius: 26px; box-shadow: 0 8px 0 var(--kg-navy); }
+.kg-reveal .kg-title em { color: var(--kg-pink-deep); }
+.kg-avatar--big { width: 72px; height: 72px; font-size: 34px; border-width: 3px; border-radius: 22px; background: var(--kg-white); }
+.kg-reveal-song { font-weight: 700; }
+.kg-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; background: var(--kg-navy); color: var(--kg-white); font-weight: 800; font-size: 15px; }
+.kg-guesses, .kg-standings, .kg-awards, .kg-picks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.kg-guesses li, .kg-standings li, .kg-picks li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding-bottom: 8px; border-bottom: 2px dashed var(--kg-line-soft); }
+.kg-guesses li:last-child, .kg-standings li:last-child, .kg-picks li:last-child { border-bottom: 0; padding-bottom: 0; }
+.kg-guesses li > span:first-child { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 0; }
+.kg-guesses .kg-muted { color: var(--kg-on-white-muted); }
+.kg-points { flex: none; padding: 2px 10px; border-radius: 999px; background: var(--kg-green); border: 2px solid var(--kg-navy); font-weight: 800; font-size: 14px; }
+.kg-standings { counter-reset: kgrank; }
+.kg-standings li { counter-increment: kgrank; }
+.kg-standings-name { display: flex; gap: 10px; align-items: center; font-weight: 800; min-width: 0; overflow-wrap: anywhere; }
+.kg-standings-name::before { content: counter(kgrank); flex: none; width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; border: 2px solid var(--kg-navy); border-radius: 10px; }
+.kg-standings-top .kg-standings-name::before { background: var(--kg-yellow); }
+.kg-standings li .kg-points { background: var(--kg-white); }
+.kg-standings-top .kg-points { background: var(--kg-yellow); }
+.kg-winner { display: flex; align-items: center; gap: 8px; color: var(--kg-yellow); font-size: 21px; font-weight: 800; }
+.kg-awards li { display: flex; flex-direction: column; }
+.kg-picks li > span { min-width: 0; overflow-wrap: anywhere; }
+.kg-picks li > strong { flex: none; }
+
 @media (prefers-reduced-motion: reduce) {
-  .kg-btn, .kg-sealed { transition: none; transform: none; }
+  .kg-btn, .kg-sealed, .kg-tile { transition: none; transform: none; }
+  .kg-progress span { transition: none; }
 }
 @media (forced-colors: active) {
-  .kg-btn, .kg-panel, .kg-input, .kg-sealed, .kg-notice, .kg-choice-option span, .kg-pill { border-color: CanvasText; }
+  .kg-btn, .kg-panel, .kg-input, .kg-sealed, .kg-notice, .kg-choice-option span, .kg-pill, .kg-tile, .kg-sheet, .kg-reveal, .kg-dock { border-color: CanvasText; }
+  .kg-progress span { background: Highlight; }
   .kg-choice-option input:checked + span { outline: 3px solid Highlight; }
   .kg-btn:disabled { border-color: GrayText; color: GrayText; }
 }

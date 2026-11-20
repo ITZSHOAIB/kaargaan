@@ -2,6 +2,7 @@ import { useState } from "react";
 import { CheckCircle2, Lock, QrCode, ScanLine, Send, UserPlus, X } from "lucide-react";
 import { inviteLink, plural } from "../../lib/card";
 import { lobbyReady, MAX_PLAYERS, MIN_PLAYERS, type Lobby, type LobbyAction, type LobbyPlayer } from "../../lib/lobby";
+import { listNames } from "../../lib/words";
 import { QrImage } from "../../ui/QrImage";
 import { QrScan } from "../../ui/QrScan";
 import { HostSongs } from "./HostSongs";
@@ -15,10 +16,6 @@ type Props = {
 };
 
 const PLAYER_COLOURS = ["--kg-p1", "--kg-p2", "--kg-p3", "--kg-p4", "--kg-p5", "--kg-p6"];
-
-function listNames(names: string[]): string {
-  return names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
-}
 
 function startHint(lobby: Lobby): string {
   if (lobby.players.length < MIN_PLAYERS) return `Need at least ${MIN_PLAYERS} players. Send the invite to more friends.`;
