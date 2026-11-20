@@ -42,6 +42,11 @@ export function readInviteFragment(hash: string): Result<{ invite: Invite }> {
   }
 }
 
+/** Finds the invite in a pasted link or chat message. */
+export function inviteFromText(text: string): Result<{ invite: Invite }> {
+  return readInviteFragment(text.match(/#i=[A-Za-z0-9_-]+/)?.[0] ?? "");
+}
+
 export function parseInvite(value: unknown): Invite | null {
   if (!isRecord(value) || value.v !== 2) return null;
   const { roomId, key, theme, songs, host } = value;
