@@ -73,10 +73,6 @@ export function clearCurrentGame(): void {
   localStorage.removeItem(KEY);
 }
 
-export function currentGameKey(): string {
-  return KEY;
-}
-
 function readEnvelope(): GameEnvelope | null {
   const raw = localStorage.getItem(KEY);
   if (!raw) {

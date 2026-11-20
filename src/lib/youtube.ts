@@ -78,10 +78,6 @@ function validateCandidate(candidate: string): string | null {
   return VIDEO_ID_RE.test(candidate) ? candidate : null;
 }
 
-export function canonicalEmbedUrl(videoId: string) {
-  return `https://www.youtube.com/embed/${videoId}`;
-}
-
 export type VideoCheck = { status: "ok"; title: string } | { status: "blocked" | "missing" | "unknown" };
 
 /**

@@ -3,7 +3,7 @@ import { HomePage } from "./pages/HomePage";
 import { CardPage } from "./pages/card/CardPage";
 import { PlayPage } from "./pages/play/PlayPage";
 import { StagePage } from "./pages/stage/StagePage";
-import { UpdateBanner } from "./components/UpdateBanner";
+import { UpdateBanner } from "./ui/UpdateBanner";
 
 export default function App() {
   return <>
