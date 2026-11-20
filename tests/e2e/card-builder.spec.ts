@@ -86,6 +86,21 @@ test("without an invite the page explains how to get one and accepts a pasted in
   await expect(page.getByRole("heading", { name: "Make your song card" })).toBeVisible();
 });
 
+test("opening a new invite link on the card page switches games but keeps the name", async ({ page }) => {
+  await page.goto(inviteLink("", invite));
+  await page.getByLabel("Your name").fill("Madhurima");
+  await page.getByLabel("Song 1 link").fill("https://youtu.be/dQw4w9WgXcQ");
+  const next = createInvite({ theme: "Monsoon night", songs: 3, host: "Arjun" });
+  await page.goto(inviteLink("", next));
+  await expect(page.getByText("Arjun's game · 3 songs each")).toBeVisible();
+  await expect(page.getByLabel("Your name")).toHaveValue("Madhurima");
+  await expect(page.getByLabel("Song 1 link")).toHaveValue("");
+  await expect(page.getByLabel("Song 3 link")).toBeVisible();
+  await page.goto("/card#i=broken");
+  await expect(page.getByRole("alert")).toContainText("invite link is broken");
+  await expect(page.getByText("Arjun's game · 3 songs each")).toBeVisible();
+});
+
 test("the card builder fits a 320px phone", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 640 });
   await page.goto(inviteLink("", invite));
