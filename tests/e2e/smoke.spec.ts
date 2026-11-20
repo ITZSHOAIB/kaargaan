@@ -1,36 +1,34 @@
 import { expect, test } from "@playwright/test";
 
-test("home, player, and host pages render", async ({ page }) => {
-  await page.goto("/");
-  await expect(page.getByRole("heading", { name: "KaarGaan" })).toBeVisible();
+test("every screen loads without console errors", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
+  for (const [path, heading] of [["/", "Whose song is it?"], ["/stage", "Set up the game"], ["/card", "Ask your host for the invite link"]]) {
+    await page.goto(path);
+    await expect(page.getByRole("heading", { level: 1 })).toContainText(heading);
+  }
+  expect(errors).toEqual([]);
+});
 
-  await page.getByRole("link", { name: "Join as a player" }).click();
-  await expect(page.getByRole("heading", { name: "Join the room" })).toBeVisible();
-  await page.screenshot({ path: "/tmp/kaargaan-player-join.png", fullPage: true });
-  await page.getByText("Can't use the camera? Paste the invite").click();
-  await page.getByPlaceholder("Paste the room invite payload").fill(JSON.stringify({
-    format: "kaargaan-room-invite",
-    version: 1,
-    roomId: "room-smoke",
-    roomToken: "token-smoke",
-    theme: "Monsoon night",
-    songsPerPlayer: 2,
-    playerCount: 4
-  }));
-  await page.getByRole("button", { name: "Use invite" }).click();
-  await expect(page.getByRole("heading", { name: "Prepare songs for the host" })).toBeVisible();
-  await expect(page.getByText("Monsoon night")).toBeVisible();
-  await expect(page.locator("header .room-subheader")).toBeVisible();
-  await page.getByRole("textbox", { name: "Your name" }).fill("Remote player");
-  await page.getByLabel("Song 1 (hidden)", { exact: true }).fill("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
-  await page.getByLabel("Song 2 (hidden)", { exact: true }).fill("https://www.youtube.com/watch?v=9bZkp7q19f0");
-  await page.getByRole("button", { name: "Generate submission QR" }).click();
-  await expect(page.getByRole("heading", { name: "Show QR or share the encrypted entry" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Copy encrypted entry" })).toBeVisible();
-  await expect(page.locator("header .room-subheader")).toBeVisible();
-  await page.screenshot({ path: "/tmp/kaargaan-player-prepare.png", fullPage: true });
-
+test("opening the app forgets saves from the old pass-the-phone flow but keeps tonight's game", async ({ page }) => {
+  await page.addInitScript(() => {
+    if (sessionStorage.getItem("seeded")) return;
+    sessionStorage.setItem("seeded", "1");
+    for (const key of ["kaargaan.host-setup.v1", "kaargaan.player-setup.v1", "kaargaan.phase1.snapshot.v1"]) localStorage.setItem(key, "{}");
+    localStorage.setItem("kaargaan.crew.v1", JSON.stringify({ hostName: "Rupa", names: ["Arjun"], theme: "t", songs: 2 }));
+    localStorage.setItem("kaargaan.current-game.v1", "tonight");
+  });
   await page.goto("/");
-  await page.getByRole("link", { name: "Host a game" }).click();
-  await expect(page.getByRole("heading", { name: "Set up the room" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Whose song is it?");
+  const keys = await page.evaluate(() => Object.keys(localStorage).sort());
+  expect(keys).toEqual(["kaargaan.crew.v1", "kaargaan.current-game.v1"]);
+});
+
+test("the installed app and browser bar use Buzzer Night blue", async ({ page, request }) => {
+  await page.goto("/");
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#2430d9");
+  const href = await page.locator('link[rel="manifest"]').getAttribute("href");
+  const manifest = await (await request.get(href!)).json();
+  expect(manifest).toMatchObject({ name: "KaarGaan", theme_color: "#2430d9", background_color: "#2430d9", start_url: "/" });
 });

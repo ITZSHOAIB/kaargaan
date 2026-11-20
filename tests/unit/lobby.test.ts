@@ -139,3 +139,12 @@ describe("starting", () => {
     expect(lobby.players.map((p) => p.name)).toEqual(["Sohab", "Rupa", "Arjun"]);
   });
 });
+
+describe("notices from outside the reducer", () => {
+  it("shows a card that couldn't be opened as an error, and clears it on the next action", () => {
+    let lobby = run(base(), { type: "showError", text: "This card is for a different game." });
+    expect(lobby.notice).toEqual({ kind: "error", text: "This card is for a different game." });
+    lobby = run(lobby, { type: "addPlayer", name: "Tanvi" });
+    expect(lobby.notice).toBeNull();
+  });
+});

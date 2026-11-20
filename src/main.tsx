@@ -3,8 +3,15 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { registerSW } from "virtual:pwa-register";
 import App from "./App";
+import { forgetLegacySaves } from "./lib/stageStore";
 import { signalUpdateReady } from "./lib/updateSignal";
-import "./index.css";
+import "@fontsource/baloo-da-2/500.css";
+import "@fontsource/baloo-da-2/600.css";
+import "@fontsource/baloo-da-2/700.css";
+import "@fontsource/baloo-da-2/800.css";
+import "./styles/buzzer.css";
+
+forgetLegacySaves();
 
 const updateSW = registerSW({
   immediate: true,

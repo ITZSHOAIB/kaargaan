@@ -15,7 +15,9 @@ export default defineConfig({
   reporter: "list",
   use: {
     baseURL: "http://127.0.0.1:4173",
-    trace: "on-first-retry"
+    trace: "on-first-retry",
+    // Specs run with motion off so timing never decides a result; tests/e2e/motion.spec.ts turns it back on.
+    reducedMotion: "reduce"
   },
   webServer,
   projects: [
