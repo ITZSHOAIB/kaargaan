@@ -10,7 +10,7 @@ const ALLOWED_HOSTS = new Set([
 ]);
 
 export function normalizeYouTubeLink(input: string): YouTubeLinkCheck {
-  const trimmed = input.trim();
+  const trimmed = extractLink(input.trim());
   if (!trimmed) {
     return { ok: false, error: "Paste a YouTube or YouTube Music link first." };
   }
@@ -54,7 +54,7 @@ function extractVideoId(url: URL): string | null {
   if (paths[0] === "watch") {
     return validateCandidate(trimCandidate(url.searchParams.get("v")));
   }
-  if (paths[0] === "shorts" || paths[0] === "embed") {
+  if (paths[0] === "shorts" || paths[0] === "embed" || paths[0] === "live") {
     return validateCandidate(trimCandidate(paths[1]));
   }
   if (host === "music.youtube.com" && paths[0] === "watch") {
@@ -62,6 +62,12 @@ function extractVideoId(url: URL): string | null {
   }
 
   return null;
+}
+
+/** Pulls the link out of shared text and adds a missing scheme, so "youtu.be/…" works. */
+function extractLink(input: string): string {
+  const found = input.match(/(?:https?:\/\/)?(?:[a-z0-9-]+\.)*(?:youtube\.com|youtu\.be)\/\S+/i)?.[0] ?? input;
+  return /^[a-z]+:\/\//i.test(found) ? found : found ? `https://${found}` : "";
 }
 
 function trimCandidate(candidate: string | null): string {

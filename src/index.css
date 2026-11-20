@@ -200,10 +200,10 @@ main h2:focus { outline:none; }
 .reveal-moment div { display:grid; gap:3px; }
 .reveal-moment span { font-size:11px; font-weight:800; letter-spacing:.08em; }
 .reveal-moment strong { font-size:16px; line-height:1.25; }
-.reveal-moment p { margin:2px 0 0; color:var(--muted); font-size:13px; line-height:1.5; }
+.reveal-moment p { margin:2px 0 0; color:#2f3a35; font-size:13px; line-height:1.5; }
 .reveal-moment.perfect-bluff { background:var(--lime); }
 .reveal-moment.solo-guess { background:var(--coral); }
-.reveal-moment.solo-guess p { color:#4b2b23; }
+.reveal-moment.solo-guess p { color:#2a1712; }
 .reveal-moment.room-read { background:var(--blue); }
 .game-error { padding:14px; border:1px solid #922c22; background:#fff4ef; color:#922c22; border-radius:6px; font-size:14px; }
 .game-feedback { max-width:800px; margin:0 auto 20px; }
@@ -374,3 +374,6 @@ main h2:focus { outline:none; }
  .room-player-list .button { width:100%; }
  .setup-toolbar { margin-bottom:20px; }
 }
+.update-banner { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:12px; padding:10px 16px; background:var(--ink); color:var(--sheet); font-weight:700; }
+.update-banner .button { min-height:44px; }
+summary { min-height:44px; align-content:center; cursor:pointer; }

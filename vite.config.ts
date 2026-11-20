@@ -8,14 +8,14 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: "autoUpdate",
+      registerType: "prompt",
       includeAssets: ["favicon.svg"],
       manifest: {
         name: "KaarGaan",
         short_name: "KaarGaan",
         description: "A shared-phone music bluffing game for the same room.",
-        theme_color: "#0f172a",
-        background_color: "#0b1020",
+        theme_color: "#eee9dd",
+        background_color: "#eee9dd",
         display: "standalone",
         start_url: "/",
         icons: [

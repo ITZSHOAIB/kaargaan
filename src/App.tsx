@@ -5,10 +5,12 @@ import { RoomHeaderTarget } from "./lib/roomHeader";
 import { HomePage } from "./pages/HomePage";
 import { PreparePage } from "./pages/PreparePage";
 import { GamePage } from "./pages/GamePage";
+import { UpdateBanner } from "./components/UpdateBanner";
 
 export default function App() {
   const [roomTarget, setRoomTarget] = useState<HTMLDivElement | null>(null);
   return <RoomHeaderTarget.Provider value={roomTarget}><div className="app-frame">
+    <UpdateBanner />
     <a className="skip-link" href="#main-content">Skip to game content</a>
     <header className="masthead">
       <Link className="brand" to="/" aria-label="KaarGaan home"><Disc3 size={30} aria-hidden="true" /><h1>KaarGaan<span lang="bn">কার গান?</span></h1></Link>

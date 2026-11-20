@@ -22,8 +22,8 @@ test("home, player, and host pages render", async ({ page }) => {
   await expect(page.getByText("Monsoon night")).toBeVisible();
   await expect(page.locator("header .room-subheader")).toBeVisible();
   await page.getByRole("textbox", { name: "Your name" }).fill("Remote player");
-  await page.getByRole("textbox", { name: "Song 1" }).fill("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
-  await page.getByRole("textbox", { name: "Song 2" }).fill("https://www.youtube.com/watch?v=9bZkp7q19f0");
+  await page.getByLabel("Song 1 (hidden)", { exact: true }).fill("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+  await page.getByLabel("Song 2 (hidden)", { exact: true }).fill("https://www.youtube.com/watch?v=9bZkp7q19f0");
   await page.getByRole("button", { name: "Generate submission QR" }).click();
   await expect(page.getByRole("heading", { name: "Show QR or share the encrypted entry" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Copy encrypted entry" })).toBeVisible();

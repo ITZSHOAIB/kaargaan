@@ -8,15 +8,15 @@ async function join(page: Page) {
   await page.getByPlaceholder("Paste the room invite payload").fill(JSON.stringify(invite));
   await page.getByRole("button", { name: "Use invite" }).click();
   await page.getByRole("textbox", { name: "Your name" }).fill("Retry player");
-  await page.getByRole("textbox", { name: "Song 1", exact: true }).fill("https://youtu.be/dQw4w9WgXcQ");
-  await page.getByRole("textbox", { name: "Song 2", exact: true }).fill("https://youtu.be/9bZkp7q19f0");
+  await page.getByLabel("Song 1 (hidden)", { exact: true }).fill("https://youtu.be/dQw4w9WgXcQ");
+  await page.getByLabel("Song 2 (hidden)", { exact: true }).fill("https://youtu.be/9bZkp7q19f0");
 }
 
 test("editing a song retires its previously generated QR and code immediately", async ({ page }) => {
   await join(page);
   await page.getByRole("button", { name: "Generate submission QR" }).click();
   await expect(page.getByRole("button", { name: "Copy encrypted entry" })).toBeVisible();
-  await page.getByRole("textbox", { name: "Song 2", exact: true }).fill("https://youtu.be/kJQP7kiw5Fk");
+  await page.getByLabel("Song 2 (hidden)", { exact: true }).fill("https://youtu.be/kJQP7kiw5Fk");
   await expect(page.getByRole("button", { name: "Copy encrypted entry" })).toHaveCount(0);
   await expect(page.getByRole("img", { name: /Generated encrypted song entry QR code/i })).toHaveCount(0);
 });
@@ -39,7 +39,7 @@ test("an older encryption request cannot overwrite a newer song edit", async ({ 
   await join(page);
   await page.getByRole("button", { name: "Generate submission QR" }).click();
   await expect.poll(() => page.evaluate(() => "releaseOldEncryption" in window)).toBe(true);
-  await page.getByRole("textbox", { name: "Song 2", exact: true }).fill("https://youtu.be/kJQP7kiw5Fk");
+  await page.getByLabel("Song 2 (hidden)", { exact: true }).fill("https://youtu.be/kJQP7kiw5Fk");
   await page.getByRole("button", { name: "Generate submission QR" }).click();
   await expect(page.getByRole("button", { name: "Copy encrypted entry" })).toBeVisible();
   await page.evaluate(() => (window as unknown as { releaseOldEncryption: () => void }).releaseOldEncryption());
@@ -91,18 +91,18 @@ test("real player retries report exact conflicts, preserve the room, and survive
   await player.getByPlaceholder("Paste the room invite payload").fill(roomPayload);
   await player.getByRole("button", { name: "Use invite" }).click();
   await player.getByRole("textbox", { name: "Your name" }).fill("Madhurima");
-  await player.getByRole("textbox", { name: "Song 1", exact: true }).fill("https://www.youtube.com/watch?v=dQw4w9WgXcQ&si=different-url");
-  await player.getByRole("textbox", { name: "Song 2", exact: true }).fill("https://youtu.be/9bZkp7q19f0");
+  await player.getByLabel("Song 1 (hidden)", { exact: true }).fill("https://www.youtube.com/watch?v=dQw4w9WgXcQ&si=different-url");
+  await player.getByLabel("Song 2 (hidden)", { exact: true }).fill("https://youtu.be/9bZkp7q19f0");
   await pasteEntry(host, await generatedCode(player));
   await expect(host.getByRole("alert")).toContainText("Madhurima: Songs 1, 2 use the same YouTube video");
   await expect(host.locator(".entry-confirmation")).toHaveCount(0);
-  await player.getByRole("textbox", { name: "Song 1", exact: true }).fill("https://youtu.be/kJQP7kiw5Fk");
+  await player.getByLabel("Song 1 (hidden)", { exact: true }).fill("https://youtu.be/kJQP7kiw5Fk");
   await pasteEntry(host, await generatedCode(player));
   await expect(host.getByRole("alert")).toContainText("Madhurima: Song 2 uses the same YouTube video");
   await host.screenshot({ path: "/tmp/kaargaan-song-conflict.png", fullPage: true });
-  await player.getByRole("textbox", { name: "Song 2", exact: true }).fill("https://youtu.be/Zi_XLOBDo_Y");
+  await player.getByLabel("Song 2 (hidden)", { exact: true }).fill("https://youtu.be/Zi_XLOBDo_Y");
   await player.reload();
-  await expect(player.getByRole("textbox", { name: "Song 1", exact: true })).toHaveValue("https://youtu.be/kJQP7kiw5Fk");
+  await expect(player.getByLabel("Song 1 (hidden)", { exact: true })).toHaveValue("https://youtu.be/kJQP7kiw5Fk");
   await expect(player.getByRole("textbox", { name: "Your name" })).toHaveValue("Madhurima");
   await pasteEntry(host, await generatedCode(player));
   await expect(host.getByRole("button", { name: "Confirm player submission" })).toBeVisible();
@@ -111,7 +111,7 @@ test("real player retries report exact conflicts, preserve the room, and survive
   await expect(host.getByRole("heading", { name: "Madhurima is in." })).toBeVisible();
   await host.getByRole("button", { name: "Confirm player submission" }).click();
   await host.getByRole("button", { name: "Scan Player 3 submission" }).click();
-  await host.getByRole("button", { name: "Room & players", exact: true }).click();
+  await host.getByRole("button", { name: "Manage room", exact: true }).click();
   await host.getByText("Show invite text", { exact: true }).click();
   await expect(host.getByRole("textbox", { name: "Room invite payload" })).toHaveValue(roomPayload);
   await expect(host.getByText("Songs already collected. No need to resubmit.")).toHaveCount(2);
@@ -122,7 +122,7 @@ test("real player retries report exact conflicts, preserve the room, and survive
   await pasteEntry(host, replacement);
   await expect(host.getByRole("button", { name: "Confirm player submission" })).toBeVisible();
   await host.getByRole("button", { name: "Discard and scan again" }).click();
-  await host.getByRole("button", { name: "Room & players", exact: true }).click();
+  await host.getByRole("button", { name: "Manage room", exact: true }).click();
   await expect(host.getByRole("button", { name: "Replace Madhurima entry" })).toBeVisible();
   await host.getByRole("button", { name: "Collect Player 3 entry" }).click();
   await host.reload();
