@@ -167,6 +167,16 @@ test("the host can check scores, skip a song and end the night early", async ({ 
   await page.getByRole("dialog", { name: "End the game now?" }).getByRole("button", { name: "End it" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Final scores");
   await expect(page.getByText("Game ended early. Only revealed rounds count.")).toBeVisible();
+
+  // Only revealed songs name their owner; skipped and unplayed songs keep the secret.
+  const picks = page.getByRole("region", { name: "Who picked what" }).getByRole("listitem");
+  await expect(picks).toHaveCount(4);
+  await expect(picks.nth(0)).toContainText(owner.name);
+  await expect(picks.nth(1)).toContainText("Skipped");
+  await expect(picks.nth(2)).toContainText("Not played");
+  await expect(picks.nth(3)).toContainText("Not played");
+  for (const i of [1, 2, 3]) await expect(picks.nth(i)).not.toContainText(ownerOf(game, i).name);
+  await expectAccessible(page);
 });
 
 test("final scores handle a shared crown, a scoreless night and long names on any screen", async ({ page }) => {
