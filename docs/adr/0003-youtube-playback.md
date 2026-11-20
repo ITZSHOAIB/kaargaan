@@ -1,6 +1,6 @@
 # ADR 0003: Visible YouTube playback with external fallback
 
-**Status:** Accepted  
+**Status:** Accepted; the external fallback and host-paced voting are replaced by [ADR 0007](0007-open-voting-embed-only-playback.md)  
 **Date:** 2026-09-06
 
 Players submit familiar YouTube or YouTube Music links. Use an explicitly started, visible official YouTube iframe for the current video and provide an external YouTube link when embedding fails. The host controls progression; playback events never reveal ownership, score or advance a round.

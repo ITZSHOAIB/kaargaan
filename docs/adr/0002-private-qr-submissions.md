@@ -1,6 +1,6 @@
 # ADR 0002: Private local QR submissions
 
-**Status:** Accepted  
+**Status:** Superseded by [ADR 0006](0006-sealed-song-cards.md)  
 **Date:** 2026-09-06
 
 Players prefer preparing links on their own phones, but the game has no synchronized room or backend. Generate a compact local song-slip QR containing video IDs. Each player privately takes the game phone, selects their name, scans and confirms their slip, then returns to a covered handoff screen. Manual entry remains available.

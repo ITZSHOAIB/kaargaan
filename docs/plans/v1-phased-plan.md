@@ -1,5 +1,7 @@
 # KaarGaan — phased implementation plan
 
+> **Historical.** This plan built the first pass-the-phone version. The current design (sealed cards, open voting, Buzzer Night) is described in ADRs [0005](../adr/0005-buzzer-night-interface.md)–[0007](../adr/0007-open-voting-embed-only-playback.md).
+
 Implement one phase at a time and validate its exit criteria before starting the next. Keep the PRD, rules and architecture aligned as implementation lands.
 
 ## Phase 0 — Project layout and documentation

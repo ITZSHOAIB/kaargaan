@@ -3,6 +3,8 @@
 **Status:** Accepted  
 **Date:** 2026-09-06
 
+> Since 2026-11: players seal their songs on their own phones ([ADR 0006](0006-sealed-song-cards.md)) and tap their own votes on the host phone ([ADR 0007](0007-open-voting-embed-only-playback.md)). The game still runs on one phone with no backend.
+
 KaarGaan is for friends physically together and should not need operated backend infrastructure. The game runs entirely on one shared phone, with the host recording spoken votes and browser storage retaining the current game. Deploy static assets on Cloudflare Pages without Functions or Workers.
 
 ## Alternatives and consequences
